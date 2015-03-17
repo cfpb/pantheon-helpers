@@ -1,0 +1,23 @@
+{
+  "name": "pantheon-helpers",
+  "version": "0.1.0",
+  "description": "Couch Utils and Helpers for Microservices",
+  "author": "David Greisen <david.greisen@cfpb.gov",
+  "scripts": {
+    "test": "icake test"
+  },
+  "dependencies": {
+    "iced-runtime": "1.0.2",
+    "nano": "6.0.2",
+    "node-uuid": "1.4.2",
+    "parse-links": "0.1.0",
+    "promise": "^6.1.0",
+    "request": "2.49.0",
+    "underscore": "1.7.0",
+    "underscore.string": "~3.0.3",
+    "follow": "0.11.4"
+  },
+  "devDependencies": {
+  },
+  "engine": "node >= 0.4.1"
+}

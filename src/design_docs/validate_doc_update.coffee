@@ -42,8 +42,4 @@ v =
     if not authorized
       throw({ unauthorized: 'You do not have the privileges necessary to perform the action.' });
 
-try
-  require('underscore')
-  module.exports = v
-catch
-  module.exports = v.validate_doc_update
+module.exports = v

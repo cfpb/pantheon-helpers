@@ -38,3 +38,25 @@ describe 'mk_objs', () ->
       obj = {a: []}
       actual = h.mk_objs(obj, ['a', 'b', 'c'])
     ).toThrow()
+
+describe 'remove_in_place', () ->
+  it 'removes the value from the container array, if already there', () ->
+    actual = ['a', 'b', 'c']
+    h.remove_in_place(actual, 'b')
+    expect(actual).toEqual(['a', 'c'])
+
+  it 'does nothing if the value is not in the container', () ->
+    actual = ['a', 'c']
+    h.remove_in_place(actual, 'b')
+    expect(actual).toEqual(['a', 'c'])
+
+describe 'insert_in_place', () ->
+  it 'adds the value to the container array, if not already there', () ->
+    actual = ['a', 'b']
+    h.insert_in_place(actual, 'c')
+    expect(actual).toEqual(['a', 'b', 'c'])
+
+  it 'does nothing if the value is already there', () ->
+    actual = ['a', 'b', 'c']
+    h.insert_in_place(actual, 'c')
+    expect(actual).toEqual(['a', 'b', 'c'])

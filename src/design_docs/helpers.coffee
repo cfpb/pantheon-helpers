@@ -30,4 +30,13 @@ h.mk_objs = (obj, path_array, val={}) ->
     throw new Error('item at "' + path_part + '" must be an Object, but it is a ' + typeof(obj[path_part]) + '.')
   return h.mk_objs(obj[path_part], path_array, val)
 
+h.remove_in_place = (container, value) ->
+  if value in container
+    i = container.indexOf(value)
+    container.splice(i, 1)
+
+h.insert_in_place = (container, value) ->
+  if value not in container
+    container.push(value)
+
 module.exports = h

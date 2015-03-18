@@ -85,7 +85,8 @@ describe 'validate_audit_entry', () ->
   beforeEach () ->
     this.actions = {
       'success': jasmine.createSpy('success').andReturn(true)
-      'fail': jasmine.createSpy('fail').andReturn(false)
+      'auth_fail': jasmine.createSpy('auth_fail').andCallFake(() -> throw({state: 'unauthorized', err: 'authorization error'}))
+      'validation_fail': jasmine.createSpy('validation_fail').andCallFake(() -> throw({state: 'invalid', err: 'validation error'}))
     }
     this.entry = {
       u: 'user1',
@@ -97,21 +98,27 @@ describe 'validate_audit_entry', () ->
 
   it 'throws an error if the entry user is not the same as the actor', () ->
     this.actor.name = 'user2'
-    expect(() ->
+    expect(() =>
       v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
     ).toThrow()
 
   it 'throws an error if the action type has no corresponding validation function in the actions', () ->
     this.entry.a = 'not_an_action'
-    expect(() ->
+    expect(() =>
       v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
     ).toThrow()
 
   it 'does nothing if the validation passes', () ->
     v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
 
-  it 'throws an error if validation fails', () ->
-    this.entry.a = 'fail'
-    expect(() ->
+  it 'throws an auth error if there is an auth failure', () ->
+    this.entry.a = 'auth_fail'
+    expect(() =>
       v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
-    ).toThrow()
+    ).toThrow({unauthorized: 'authorization error'})
+
+  it 'throws an invalid error if there is a validation failure', () ->
+    this.entry.a = 'validation_fail'
+    expect(() =>
+      v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
+    ).toThrow({forbidden: 'validation error'})

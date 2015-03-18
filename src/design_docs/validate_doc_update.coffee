@@ -37,9 +37,12 @@ v =
     if entry.a not of actions
       throw({ forbidden: 'Invalid action: ' + entry.a + '.' })
 
-    authorized = actions[entry.a](entry, actor, old_doc, new_doc) or false
-
-    if not authorized
-      throw({ unauthorized: 'You do not have the privileges necessary to perform the action.' });
+    try
+      authorized = actions[entry.a](entry, actor, old_doc, new_doc) or false
+    catch e
+      if e.state == 'unauthorized'
+        throw({ unauthorized: e.err })
+      else
+        throw({ forbidden: e.err })      
 
 module.exports = v

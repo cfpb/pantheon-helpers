@@ -5,13 +5,14 @@ catch err
 
 
 v =
-  validate_doc_update: (validation_fns, get_doc_type, should_ignore_user) ->
+  validate_doc_update: (validation_fns, get_doc_type, should_skip_validation_for_user) ->
+    should_skip_validation_for_user or= () -> false
     return (new_doc, old_doc, user_ctx, sec_obj) ->
       doc_type = get_doc_type(old_doc)
       actions = validation_fns[doc_type]
       new_audit_entries = v.get_new_audit_entries(new_doc, old_doc)
 
-      if should_ignore_user(user_ctx) or
+      if should_skip_validation_for_user(user_ctx) or
          not actions or
          not new_audit_entries.length
         return

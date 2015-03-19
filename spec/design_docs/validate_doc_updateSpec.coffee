@@ -3,7 +3,7 @@ v = require('../../lib/design_docs/validate_doc_update')
 describe 'validate_doc_update', () ->
   beforeEach () ->
     this.get_doc_type = jasmine.createSpy('get_doc_type').andReturn('team')
-    this.should_ignore_user = jasmine.createSpy('should_ignore_user').andReturn(false)
+    this.should_skip_validation_for_user = jasmine.createSpy('should_skip_validation_for_user').andReturn(false)
     this.validation_fns = {
       team: {
         'u+': 'handle_u+'
@@ -12,7 +12,7 @@ describe 'validate_doc_update', () ->
     }
     spyOn(v, 'get_new_audit_entries').andReturn(['entry', 'entry2'])
     spyOn(v, 'validate_audit_entries')
-    this.validate_doc_update = v.validate_doc_update(this.validation_fns, this.get_doc_type, this.should_ignore_user)
+    this.validate_doc_update = v.validate_doc_update(this.validation_fns, this.get_doc_type, this.should_skip_validation_for_user)
 
   it 'gets the doc type from the passed get_doc_type fn', () ->
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
@@ -22,8 +22,8 @@ describe 'validate_doc_update', () ->
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
     expect(v.get_new_audit_entries).toHaveBeenCalledWith('new_doc', 'old_doc')
 
-  it 'does not run validation if the should_ignore_user returns false for the actor (user_ctx)', () ->
-    this.should_ignore_user.andReturn(true)
+  it 'does not run validation if the should_skip_validation_for_user returns false for the actor (user_ctx)', () ->
+    this.should_skip_validation_for_user.andReturn(true)
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
     expect(v.validate_audit_entries).not.toHaveBeenCalled()
 
@@ -41,7 +41,11 @@ describe 'validate_doc_update', () ->
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
     expect(v.validate_audit_entries).toHaveBeenCalledWith(this.validation_fns.team, ['entry', 'entry2'], 'user_ctx', 'old_doc', 'new_doc')
 
-
+  it 'does not require a should_skip_validation_for_user method; defaults to skipping nothing', () ->
+    v.validate_doc_update(this.validation_fns, this.get_doc_type)
+    this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
+    expect(v.validate_audit_entries).toHaveBeenCalled()
+ 
 describe 'get_new_audit_entries', () ->
   beforeEach () ->
     this.old_doc = {audit: [1,2]}

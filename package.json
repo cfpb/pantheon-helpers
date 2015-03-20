@@ -14,10 +14,10 @@
     "promise": "^6.1.0",
     "request": "2.49.0",
     "underscore": "1.7.0",
-    "underscore.string": "~3.0.3",
-    "follow": "0.11.4"
+    "underscore.string": "3.0.3",
+    "follow": "0.11.4",
+    "prompt": "0.2.14"
   },
-  "devDependencies": {
-  },
+  "devDependencies": {},
   "engine": "node >= 0.4.1"
 }

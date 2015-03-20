@@ -18,7 +18,7 @@ module.exports = (conf) ->
   x.nano_user = (user) ->
     return require('nano')({url: get_couchdb_url(user)})
 
-  x.nano_admin = nano_admin = x.nano_user('admin')
+  x.nano_system_user = nano_system_user = x.nano_user(conf.COUCHDB.SYSTEM_USER)
 
   x.ensure_db = (db, method, args...) ->
     ###
@@ -33,7 +33,7 @@ module.exports = (conf) ->
       db[method].apply(db, args.concat([defer(err, resp)]))
 
     if err?.message == 'no_db_file'
-      await nano_admin.db.create(db.config.db, defer(err, resp))
+      await nano_system_user.db.create(db.config.db, defer(err, resp))
       if err
         return callback?(err, resp)
       db_name = db.config.db
@@ -72,7 +72,7 @@ module.exports = (conf) ->
     db_type - the type of database - updates all dbs whos names start with db_type
     """
     design_docs = require('../../../lib/design_docs/' + db_type)
-    await nano_admin.db.list(defer(err, all_dbs))
+    await nano_system_user.db.list(defer(err, all_dbs))
     dbs = _.filter(all_dbs, (db) -> db.indexOf(db_type) == 0)
     errs = []
     await
@@ -139,14 +139,14 @@ module.exports = (conf) ->
       return callback(null, bulk_resp)
 
   x.get_uuid = (callback) ->
-    await nano_admin.request({db: "_uuids"}, defer(err, resp))
+    await nano_system_user.request({db: "_uuids"}, defer(err, resp))
     if err
       return callback(err, resp)
     return callback(null, resp.uuids[0])
 
   x.get_uuids = (count, callback) ->
     # params is not working for some reason so hacked around it with path
-    await nano_admin.request({db: "_uuids", path: '?count=' + count}, defer(err, resp))
+    await nano_system_user.request({db: "_uuids", path: '?count=' + count}, defer(err, resp))
     if err
       return callback(err, resp)
     return callback(null, resp.uuids)

@@ -2,7 +2,7 @@
   "name": "pantheon-helpers",
   "version": "0.1.0",
   "description": "Couch Utils and Helpers for Microservices",
-  "author": "David Greisen <david.greisen@cfpb.gov",
+  "author": "David Greisen <david.greisen@cfpb.gov>",
   "scripts": {
     "test": "icake test"
   },

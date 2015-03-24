@@ -57,3 +57,60 @@ task 'test', 'run all tests', (options) ->
     cp = exec "jasmine-node --coffee ./spec"
   cp.stdout.pipe(process.stdout)
   cp.stderr.pipe(process.stderr)
+
+task 'start_design_doc', 'create a new kanso design doc directory', (options) ->
+  prompt_get = Promise.denodeify(prompt.get).bind(prompt);
+  console.log('')
+  prompt.start()
+  prompt_get({
+    properties: {
+      'name': {
+        required: true
+      },
+      'description': {
+        required: true
+      },
+    }
+  }).then((resp) ->
+    DD_SRC_DIR = path.join(DIR, 'src', 'design_docs', resp.name)
+    DD_LIB_DIR = path.join(DIR, 'lib', 'design_docs', resp.name)
+    TEMPLATE_DIR = path.join(DIR, 'node_modules', 'pantheon-helpers', 'templates', 'design_doc')
+
+    console.log('\nMaking design doc dirs...')
+    fs.mkdirSync(DD_SRC_DIR)
+    fs.mkdirSync(DD_LIB_DIR)
+
+    console.log('\nCopying files...')
+    pExec('cp -r ' + path.join(TEMPLATE_DIR, 'src', '*') + ' ' + DD_SRC_DIR).then(() ->
+      pExec('cp -r ' + path.join(TEMPLATE_DIR, 'lib', '*') + ' ' + DD_LIB_DIR)
+    ).then(() ->
+      console.log('\nCustomizing kanso.json...')
+      KANSO_PATH = path.join(DD_LIB_DIR, 'kanso.json')
+      console.log(KANSO_PATH)
+      kanso_raw = fs.readFileSync(KANSO_PATH, 'utf8')
+      console.log(kanso_raw)
+      kanso = JSON.parse(kanso_raw)
+      _.extend(kanso, resp)
+      console.log(kanso)
+      new_kanso_raw =JSON.stringify(kanso)
+      console.log(new_kanso_raw)
+      f = fs.openSync(KANSO_PATH, 'w')
+      fs.writeSync(f, new_kanso_raw)
+
+      fs.symlinkSync('../../../../node_modules/pantheon-helpers/lib/design_docs/', path.join(DD_LIB_DIR, 'lib', 'share'))
+
+      console.log('\nCleaning up...')
+      cleanup = [DD_SRC_DIR, DD_LIB_DIR].map((subdir_path) ->
+        return pExec("find . -type f -name '.empty' -exec rm {} +", {cwd: subdir_path});
+      )
+      Promise.all(cleanup);
+    ).then(() ->
+      console.log('\nBuilding coffeescript...')
+      pExec("cake build", {cwd: DIR})
+    ).then(() ->
+      console.log('\nNEW DESIGN DOC READY at ' + DD_SRC_DIR)
+      console.log()
+    )
+  ).catch((err) ->
+    console.log('ERR:', err)
+  )

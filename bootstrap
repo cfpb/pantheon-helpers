@@ -36,15 +36,21 @@ bootstrap_cli = function () {
 };
 
 bootstrap = function() {
-  console.log('copying files...');
-  return exec('cp -r ' + TEMPLATE_DIR + '/* ' + PROJ_DIR).then(function () {
-    console.log('cleaning up...');
+  console.log('Copying files...');
+  return exec('cp -r ' + path.join(TEMPLATE_DIR, '*') + ' ' + PROJ_DIR).then(function () {
+    console.log('Cleaning up...');
 
     var cleanup = ['src', 'lib', 'spec'].map(function(subdir) {
       var subdir_path = path.join(PROJ_DIR, subdir);
       return exec("find . -type f -name '.empty' -exec rm {} +", {cwd: subdir_path});
     });
     return Promise.all(cleanup);
+  }).then(function() {
+    console.log('\nInstalling npm dependencies...');
+    return exec("npm install .", {cwd: PROJ_DIR});
+  }).then(function () {
+    console.log('\nBuilding coffeescript...');
+    return exec("cake build", {cwd: PROJ_DIR});
   });
 };
 

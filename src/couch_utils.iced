@@ -16,7 +16,7 @@ module.exports = (conf) ->
     out += conf.COUCHDB.HOST + ':' + conf.COUCHDB.PORT
 
   x.nano_user = (user) ->
-    return require('nano')({url: get_couchdb_url(user)})
+    return require('nano-promise')({url: get_couchdb_url(user)})
 
   x.nano_system_user = nano_system_user = x.nano_user(conf.COUCHDB.SYSTEM_USER)
 
@@ -158,7 +158,7 @@ module.exports = (conf) ->
     opts = { db: db.config.db }
     _.extend(opts, user_opts)
     opts.path = '_design/' + design_doc + '/_rewrite' + opts.path
-    nano = require('nano')(db.config.url)
+    nano = require('nano-promise')(db.config.url)
     return nano.request(opts, callback)
 
   # x.add_user = (db, username, password, callback)

@@ -7,7 +7,7 @@ prompt = require('prompt')
 prompt_get = Promise.denodeify(prompt.get).bind(prompt);
 {exec} = require 'child_process'
 pExec = Promise.denodeify(exec)
-
+_ = require('underscore')
 
 DIR = __dirname
 

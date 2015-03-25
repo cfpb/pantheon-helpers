@@ -35,5 +35,10 @@ module.exports = (action_handlers, get_doc_type, prep_doc) ->
       })
       doc.audit.push(action)
       write_doc = doc
-    out_doc = if prep_doc then prep_doc(doc) else doc
+    if prep_doc
+      out_doc = JSON.parse(JSON.stringify(doc))
+      out_doc = prep_doc(out_doc)
+    else
+      out_doc = doc
+
     return [write_doc, JSON.stringify(out_doc)]

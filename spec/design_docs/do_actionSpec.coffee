@@ -87,3 +87,7 @@ describe 'do_action', () ->
   it 'returns the display doc after running it through prep_doc fn, and stringifying it', () ->
     actual = do_action(this.actions, this.get_doc_type, this.prep_doc)(this.doc, this.req)
     expect(JSON.parse(actual[1]).prepped).toEqual(true)
+
+  it 'ensures the stored document is not modified by the prep_doc fn', () ->
+    actual = do_action(this.actions, this.get_doc_type, this.prep_doc)(this.doc, this.req)
+    expect(actual[0].prepped).toBeUndefined()

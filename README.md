@@ -38,7 +38,7 @@ and are logged.
 
 In your microservice application's home directory, run:
 
-    npm install pantheon-helpers git+https://github.com/dgreisen-cfpb/pantheon-helpers.git
+    npm install git+https://github.com/cfpb/pantheon-helpers.git
 
     npm install -g coffee-script jasmine-node
 
@@ -278,9 +278,7 @@ a.do_actions = {
 a.validate_actions = {
   # we define validation handlers for our boulder docs
   boulder: {
-    # You must define a validation function for all
-    # valid actions, even if there is no validation logic.
-    # throw an error if the action is invalid
+    # throw an error if the action is invalid;
     bu: (event, actor, old_doc, new_doc) ->
       if old_doc.status != 'at bottom'
         throw {
@@ -293,8 +291,14 @@ a.validate_actions = {
           state: 'invalid',
           err: 'cannot roll down until boulder has started rolling up'
         }
-    # we put the validation for b+ in boulder, because now
-    # that it is created, we know its type.
+
+    # You must define a validation function for all
+    # valid actions, even if there is no validation logic.
+    # Since b+ is always valid, we have an empty method.
+
+    # Validation for b+ is under the boulder doc_type, 
+    # because the action handler defined above has already
+    # run and the boulder document has been created by this point.
     b+: (event, actor, old_doc, new_doc) ->
   }
 }

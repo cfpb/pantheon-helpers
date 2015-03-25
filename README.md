@@ -14,19 +14,19 @@ This library makes it easy to build an application with the following features:
 
 Pantheon helpers provide a framework for handling "actions".
 You:
-    1) Define the actions your application will perform.
-    2) Write an action transform function for each action. 
-       The transform function takes an action and a CouchDB document,
-       and idempotently transforms the document as required by the action.
-    3) Write a validation function for each action.
-       The validation function takes the action,
-       the user who performed the action (the actor),
-       and the old and new doc. It throws an error if
-       the action was invalid or unauthorized.
-    4) Write an asyncronous worker handler for any actions that result in side-effects. 
-       The worker handler will be called _after_ the document has been written to the database,
-       and _after_ a response has been sent to the client performing the action.
-       The worker handler can run any slow, asyncronous code that the user shouldn't have to wait to complete before getting a response.
+  1. Define the actions your application will perform.
+  2. Write an action transform function for each action. 
+     The transform function takes an action and a CouchDB document,
+     and idempotently transforms the document as required by the action.
+  3. Write a validation function for each action.
+     The validation function takes the action,
+     the user who performed the action (the actor),
+     and the old and new doc. It throws an error if
+     the action was invalid or unauthorized.
+  4. Write an asyncronous worker handler for any actions that result in side-effects. 
+     The worker handler will be called _after_ the document has been written to the database,
+     and _after_ a response has been sent to the client performing the action.
+     The worker handler can run any slow, asyncronous code that the user shouldn't have to wait to complete before getting a response.
        For instance, updating a remote server with data uploaded by the action.
 
 Pantheon provides all the plumbing to ensure that these functions are run at the right time,
@@ -52,10 +52,10 @@ create a directory for the project and run:
 
 Our microservice will have endpoints to let us:
 
-    * create a boulder
-    * start rolling the boulder up the hill
-    * set the boulder rolling back down the hill
-    * get the current state of the boulder
+  * create a boulder
+  * start rolling the boulder up the hill
+  * set the boulder rolling back down the hill
+  * get the current state of the boulder
 
 The boulder will take 2 minutes to roll uphill,
 at which point it will escape Sisyphus 
@@ -166,14 +166,21 @@ If we wanted all databases that start with `boulders` to also
 have another design doc installed, we would add the name of the desired design doc to the experted array.
 
 ### 3. Design the Sisyphus microservice
-Rolling the rock up the hill takes a long time (in web time): 2 minutes. When we make a request to roll the rock up the hill, we do not want to have to wait two minutes for a response. Instead, we would like to receive a response instantly that our request to roll the rock up the hill has been accepted and is being processed. Then we want a background process to actually roll the rock up the hill for two minutes.
+Rolling the boulder up the hill takes a long time (in web time): 2 minutes. 
+When we make a request to roll the boulder up the hill,
+we do not want to have to wait two minutes for a response.
+Instead, we would like to receive a response instantly that our request to roll the boulder up the hill has been accepted and is being processed.
+Then we want a background process to actually roll the boulder up the hill for two minutes.
 
-Pantheon-helpers makes it easy to build this sort of decoupled application. First, let's figure out what our data is going to look like, then let's figure out what actions we want to be able to perform on that data. Finally, we'll implement everything.
+Pantheon-helpers makes it easy to build this sort of decoupled application.
+First, let's figure out what our data is going to look like,
+then let's figure out what actions we want to be able to perform on that data. Finally, we'll implement everything.
 
-Our rock is going to be represented by a json document.
+Our boulder is going to be represented by a json document.
 We want to know whether it's rolling up the hill,
 rolling down the hill, or at the bottom of the hill.
 We're also curious about Zeus's reaction to events as they unfold.
+We'll store Zeus's reaction to the most recent action right in the boulder document.
 Thus, our json document will look like this:
 
     { "_id": "document ID"
@@ -188,13 +195,17 @@ That's pretty easy!
 We don't even have to worry about the _id.
 CouchDB will create one for us if we don't set it explicitly.
 
-We want to be able to perform four different actions on this data:
-  1. create a new boulder ('b+')
-  2. start rolling the rock up the hill ('bu')
-  3. make the rock slip away and roll back down the hill ('bd')
-  4. bring the boulder to rest at the bottom of the hill ('br')
+We are going to need to transform our boulder document in four different ways:
 
-Obviously, we can never destroy a rock since this is an eternal task.
+  1. create a new boulder (`b+`)
+  2. start rolling the boulder up the hill (`bu`)
+  3. make the boulder slip away and roll back down the hill (`bd`)
+  4. bring the boulder to rest at the bottom of the hill (`br`)
+
+Obviously, we can never destroy a boulder since this is an eternal task.
+Note that not all of these actions are actually correspond to an endpoint. 
+For example, 
+a `br` will only ever be called by a worker handling a `bd` event.
 
 ### 4. Testing
 Testing is easy because the system is loosely coupled,
@@ -231,88 +242,96 @@ We must also tell Pantheon-helpers how to tell the difference between document t
 
 In `src/design_docs/boulder/lib/actions.coffee`
 
-    ...
+```coffeescript
+...
 
-    # define our get_doc_type function.
-    # will return boulder for boulder types
-    get_doc_type = (doc) -> return doc.type
+# define our get_doc_type function.
+# will return boulder for boulder types
+get_doc_type = (doc) -> return doc.type
 
-    # define our action handlers that will actually modify our doc
-    # in response to actions.
-    a.do_actions = {
-      # we define all actions that can be performed on boulder docs
-      boulder: {
-        # an action is a function that receives the doc to be
-        # acted on, the action to be performed, and the
-        # user performing the action. It must update the
-        # doc in place. The do_action framework ensures that the
-        # document is saved only if the action handler actually
-        # changed the document.
-        'bu': (doc, action, actor) ->
-          doc.status = 'rolling up'
-        'bd': (doc, action, actor) ->
-          doc.status = 'rolling down'
-      }
-      # we define all actions that create new docs here (since we 
-      # wouldn't know the type of a new doc until after it is created)
-      create: {
-        'b+': (doc, action, actor) ->
-          doc.type = 'boulder'
-          doc.status = 'at bottom'
-      }
-    }
+# define our action handlers that will actually modify our doc
+# in response to actions.
+a.do_actions = {
+  # we define all actions that can be performed on boulder docs
+  boulder: {
+    # an action is a function that receives the doc to be
+    # acted on, the action to be performed, and the
+    # user performing the action. It must update the
+    # doc in place. The do_action framework ensures that the
+    # document is saved only if the action handler actually
+    # changed the document.
+    'bu': (doc, action, actor) ->
+      doc.status = 'rolling up'
+    'bd': (doc, action, actor) ->
+      doc.status = 'rolling down'
+  }
+  # we define all actions that create new docs here (since we 
+  # wouldn't know the type of a new doc until after it is created)
+  create: {
+    'b+': (doc, action, actor) ->
+      doc.type = 'boulder'
+      doc.status = 'at bottom'
+  }
+}
 
-    # define our validation handlers that ensure that the action is valid.
-    a.validate_actions = {
-      # we define validation handlers for our boulder docs
-      boulder: {
-        # You must define a validation function for all
-        # valid actions, even if there is no validation logic.
-        # throw an error if the action is invalid
-        bu: (event, actor, old_doc, new_doc) ->
-          if old_doc.status != 'at bottom'
-            throw {
-              state: 'invalid', 
-              err: 'cannot start rolling boulder up until it reaches bottom'
-            }
-        bd: (event, actor, old_doc, new_doc) ->
-          if old_doc.status != 'rolling up'
-            throw {
-              state: 'invalid',
-              err: 'cannot roll down until boulder has started rolling up'
-            }
-        # we put the validation for b+ in boulder, because now
-        # that it is created, we know its type.
-        b+: (event, actor, old_doc, new_doc) ->
-      }
-    }
+# define our validation handlers that ensure that the action is valid.
+a.validate_actions = {
+  # we define validation handlers for our boulder docs
+  boulder: {
+    # You must define a validation function for all
+    # valid actions, even if there is no validation logic.
+    # throw an error if the action is invalid
+    bu: (event, actor, old_doc, new_doc) ->
+      if old_doc.status != 'at bottom'
+        throw {
+          state: 'invalid', 
+          err: 'cannot start rolling boulder up until it reaches bottom'
+        }
+    bd: (event, actor, old_doc, new_doc) ->
+      if old_doc.status != 'rolling up'
+        throw {
+          state: 'invalid',
+          err: 'cannot roll down until boulder has started rolling up'
+        }
+    # we put the validation for b+ in boulder, because now
+    # that it is created, we know its type.
+    b+: (event, actor, old_doc, new_doc) ->
+  }
+}
 
-    # we want to show how far up the hill Sisyphus is. 
-    # but we don't want to store this - it will change 
-    # moment by moment - so we are going to create a doc_prep
-    # function that takes a document and prepares it for
-    # display. If you are offended by the horrible hackiness
-    # of these calculations, you are encouraged to submit a 
-    # pull request.
+# we want to show how far up the hill Sisyphus is. 
+# but we don't want to store this - it will change 
+# moment by moment - so we are going to create a doc_prep
+# function that takes a document and prepares it for
+# display. If you are offended by the horrible hackiness
+# of these calculations, you are encouraged to submit a 
+# pull request.
 
-    prep_boulder_for_display = (doc) ->
-      last_action = doc.audit[doc.audit.length-1]
-      now = +new Date()
-      if not last_action or last_action.a = 'br'
-        doc.hillPosition = 0
+# Now, whenever you perform an action, you will receive back
+# a copy of the document with any modifications made by the
+# prep_boulder_for_display function.
 
-      else if last_action.a == 'bu'
-        doc.hillPosition = Math.floor((now - last_action.dt)*.9/120, .9)
+prep_boulder_for_display = (bouldDoc) ->
+  # get the most recent action for this boulder
+  last_action = bouldDoc.audit[bouldDoc.audit.length-1]
 
-      else if last_action.a == 'bd'
-        doc.hillPosition = Math.ceiling((now - last_action.dt)*.9/20, 0)
+  now = +new Date()
+  if not last_action or last_action.a = 'br'
+    bouldDoc.hillPosition = 0
 
-    a.do_action = do_action(
-                    a.do_actions,
-                    get_doc_type,
-                    prep_boulder_for_display,
-                  )
-    ...
+  else if last_action.a == 'bu'
+    bouldDoc.hillPosition = Math.floor((now - last_action.dt)*.9/120, .9)
+
+  else if last_action.a == 'bd'
+    bouldDoc.hillPosition = Math.ceiling((now - last_action.dt)*.9/20, 0)
+
+a.do_action = do_action(
+                a.do_actions,
+                get_doc_type,
+                prep_boulder_for_display,
+              )
+...
+```
 
 We have now defined how an action modifies a document, and we have defined when an action is valid.
 
@@ -322,21 +341,23 @@ A couple of notes:
   * Validation functions must throw either 
     {state: 'invalid', err: 'msg'} or {state: 'unauthorized', err: 'msg'}
 
-How do we actually perform an action? It's easy:
-  
-    # get an authenticated couch client pointing to the boulders database
-    db = require('./couch_utils').nano_system_user.use('boulders')
+We have now setup our design documents so CouchDB can handle our actions. How do we actually perform an action from Node.js? Pantheon-helpers provides a helper function, `doAction` to make this easy:
 
-    # import the do_action method
-    doAction = require('pantheon-helpers/lib/do_action').doAction
+```coffeescript  
+# get an authenticated couch client pointing to the boulders database
+db = require('./couch_utils').nano_system_user.use('boulders')
 
-    # do the action, passing in the database, the document ID (if there is a document yet), and the action.
+# import the do_action method
+doAction = require('pantheon-helpers/lib/doAction')
 
-    # create a boulder
-    doAction(db, {a: 'b+'}, (err, boulder_doc) ->
-      # start rolling the boulder up the hill
-      doAction(db, boulder_doc._id, {a: 'bu'})
-    )
+# do the action, passing in the database, the design document name where the action is defined, the document ID (or `null` if this action creates a new doc), and the action.
+
+# create a boulder
+doAction(db, 'boulder', null, {a: 'b+'}, (err, boulder_doc) ->
+  # start rolling the boulder up the hill
+  doAction(db, 'boulder', boulder_doc._id, {a: 'bu'})
+)
+```
 
 As you can see, an action is just a dictionary.
 The action id is specified by the `a` key.
@@ -359,66 +380,68 @@ and call it.
 
 In `$SISYPHUS/src/worker.coffee`:
 
-    ...
+```coffeescript
+...
 
-    db = couch_utils.nano_system_user.use('boulders')
+db = couch_utils.nano_system_user.use('boulders')
 
-    # return a promise, rather than using callbacks
-    pDoAction = require('pantheon-helpers/lib/do_action').pDoAction
-    Promise = require('pantheon-helpers/lib/promise')
+# return a promise, rather than using callbacks
+pDoAction = require('pantheon-helpers/lib/do_action').pDoAction
+Promise = require('pantheon-helpers/lib/promise')
 
-    handlers: {
-      # worker functions for boulder documents
-      boulder:
-        'bu': (event, doc) ->
-          # wait two minutes, then fire off a 'bd' event
-          Promise.setTimeout(120000).next(() ->
-            pDoAction(db, doc._id, {a: 'bd'})
-          ).next(() ->
-            # determine how Zeus felt about it
-            zeus_response = _.sample([
-              'delighted', 'satisfied', 'mirthful', 'vengeful'
-            ])
-            # return that Zeus's response so we can store in in doc.
-            Promise.resolve(zeus_response)
-          )
-        'bd': (event, doc) ->
-          # wait 20 second, then fire off a 'br' event
-          Promise.setTimeout(20000).next(() ->
-            pDoAction(db, doc._id, {a: 'br'})
-          ).next(() ->
-            # determine how Zeus felt about it
-            zeus_reaction = _.sample(['expectant'])
-            # return Zeus's reaction so we can store in in doc.
-            # note that we _must_ return a promise, not a raw value.
-            # the value returned by a handler must be a dictionary
-            Promise.resolve({is: zeus_reaction)
-          )
-        # we don't need to do anything when a boulder is created or comes to rest
-        'b+': null
-        'br': null
-    }
+handlers: {
+  # worker functions for boulder documents
+  boulder:
+    'bu': (event, doc) ->
+      # wait two minutes, then fire off a 'bd' event
+      Promise.setTimeout(120000).next(() ->
+        pDoAction(db, doc._id, {a: 'bd'})
+      ).next(() ->
+        # determine how Zeus felt about it
+        zeus_response = _.sample([
+          'delighted', 'satisfied', 'mirthful', 'vengeful'
+        ])
+        # return that Zeus's response so we can store in in doc.
+        Promise.resolve({is: zeus_response})
+      )
+    'bd': (event, doc) ->
+      # wait 20 second, then fire off a 'br' event
+      Promise.setTimeout(20000).next(() ->
+        pDoAction(db, doc._id, {a: 'br'})
+      ).next(() ->
+        # determine how Zeus felt about it
+        zeus_reaction = _.sample(['expectant'])
+        # return Zeus's reaction so we can store in in doc.
+        # note that we _must_ return a promise, not a raw value.
+        # the value returned by a handler must be a dictionary
+        Promise.resolve({is: zeus_reaction})
+      )
+    # we don't need to do anything when a boulder is created or comes to rest
+    'b+': null
+    'br': null
+}
 
-    # worker functions can return data to store in the document.
-    # you might use this to store an external resource id,
-    # or any other metadata you need to be able to interact 
-    # with the external world.
+# worker functions can return data to store in the document.
+# you might use this to store an external resource id,
+# or any other metadata you need to be able to interact 
+# with the external world.
 
-    # We are storing Zeus's reaction to Sisyphus's suffering.
-    # Since every document is different, we have to tell the
-    # worker where we want to put the data returned by the worker
-    # function. It should be an array that defines a path 
-    # into the nested json document. The path should point to 
-    # a dictionary. The data returned by the worker function will
-    # be merged with any existing data in the dictionary.
+# We are storing Zeus's reaction to Sisyphus's suffering.
+# Since every document is different, we have to tell the
+# worker where we want to put the data returned by the worker
+# function. It should be an array that defines a path 
+# into the nested json document. The path should point to 
+# a dictionary. The data returned by the worker function will
+# be merged with any existing data in the dictionary.
 
-    get_handler_data_path = (doc_type) ->
-      return ['zeus']
+get_handler_data_path = (doc_type) ->
+  return ['zeus']
 
-    # this is the same function we defined in our design doc
-    get_doc_type = (doc) -> return doc.type
+# this is the same function we defined in our design doc
+get_doc_type = (doc) -> return doc.type
 
-    ...
+...
+```
 
 A couple things:
   * Worker handlers MUST return a promise.
@@ -438,19 +461,21 @@ We will correspondingly implement our route handlers in
 and `$SISYPHUS/api/boulder.coffee`.
 
 $SISYPHUS/api/boulders.coffee:
-  
-    doAction = require('pantheon-helpers/lib/do_action').doAction
 
-    b = {}
+```coffeescript  
+doAction = require('pantheon-helpers/lib/do_action').doAction
 
-    b.createBoulder = (db, callback) ->
-      return doAction(db, 'boulder', null, {a: 'b+'}, callback)
+b = {}
 
-    b.handleCreateBoulder = (req, resp) ->
-      db = req.couch.use('boulder')
-      b.createBoulder(db).pipe(resp)
+b.createBoulder = (db, callback) ->
+  return doAction(db, 'boulder', null, {a: 'b+'}, callback)
 
-    module.exports = b
+b.handleCreateBoulder = (req, resp) ->
+  db = req.couch.use('boulder')
+  b.createBoulder(db).pipe(resp)
+
+module.exports = b
+```
 
 And that's it. Let's unpack this a bit. 
 We created two functions:
@@ -475,43 +500,46 @@ Instead, it just acts as a proxy, forwarding the CouchDB response to the client 
 
 $SISYPHUS/api/boulder.coffee:
 
-    doAction = require('pantheon-helpers/lib/do_action').doAction
+```coffeescript
+doAction = require('pantheon-helpers/lib/do_action').doAction
 
-    b = {}
+b = {}
 
-    b.getBoulder = (db, boulderId, callback) ->
-      return db.get(boulderId, callback)
+b.getBoulder = (db, boulderId, callback) ->
+  return db.get(boulderId, callback)
 
-    b.rollBoulderUp = (db, boulderId, callback) ->
-      return doAction(db, 'boulder', boulderId, {a: 'bu'}, callback)
+b.rollBoulderUp = (db, boulderId, callback) ->
+  return doAction(db, 'boulder', boulderId, {a: 'bu'}, callback)
 
-    b.handleRollBoulderUp = (req, resp) ->
-      db = req.couch.use('boulder')
-      boulderId = req.params.boulderId
-      b.rollBoulderUp(db, boulderId).pipe(resp)
+b.handleRollBoulderUp = (req, resp) ->
+  db = req.couch.use('boulder')
+  boulderId = req.params.boulderId
+  b.rollBoulderUp(db, boulderId).pipe(resp)
 
-    b.rollBoulderDown = (db, boulderId, callback) ->
-      return doAction(db, 'boulder', boulderId, {a: 'bd'}, callback)
+b.rollBoulderDown = (db, boulderId, callback) ->
+  return doAction(db, 'boulder', boulderId, {a: 'bd'}, callback)
 
-    b.handleRollBoulderDown = (req, resp) ->
-      db = req.couch.use('boulder')
-      boulderId = req.params.boulderId
-      b.rollBoulderDown(db, boulderId).pipe(resp)
+b.handleRollBoulderDown = (req, resp) ->
+  db = req.couch.use('boulder')
+  boulderId = req.params.boulderId
+  b.rollBoulderDown(db, boulderId).pipe(resp)
 
-    module.exports = b
+module.exports = b
+```
 
-$SISYPHUS/routes.coffee
+$SISYPHUS/routes.coffee:
 
-    boulders = require('./api/boulders')
-    boulder = require('./api/boulder')
+```coffeescript
+boulders = require('./api/boulders')
+boulder = require('./api/boulder')
 
-    module.exports = (app) ->
-      app.post('/sisyphus/boulders/', boulders.handleCreateBoulder)
+module.exports = (app) ->
+  app.post('/sisyphus/boulders/', boulders.handleCreateBoulder)
 
-      app.get('/sisyphus/boulders/:boulderId', boulder.handleGetBoulder)
-      app.put('/sisyphus/boulders/:boulderId/state/down', boulder.handleRollBoulderDown)
-      app.put('/sisyphus/boulders/:boulderId/state/up', boulder.handleRollBoulderUp)
-
+  app.get('/sisyphus/boulders/:boulderId', boulder.handleGetBoulder)
+  app.put('/sisyphus/boulders/:boulderId/state/down', boulder.handleRollBoulderDown)
+  app.put('/sisyphus/boulders/:boulderId/state/up', boulder.handleRollBoulderUp)
+```
 
 You now have a fully functioning application with auditing and a background worker process. Soon, you will get logging as well.
 

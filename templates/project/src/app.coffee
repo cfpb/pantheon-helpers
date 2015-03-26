@@ -1,4 +1,4 @@
-pantheon = require('pantheon-helpers')
+pantheonMiddleware = require('pantheon-helpers/lib/middleware')
 conf = require('./config')
 
 express = require('express')
@@ -17,12 +17,12 @@ app.use(bodyParser.json())
 # prohibit everything else
 # if conf.DEV == true (for testing), then
 # unauthenticated reqs logged in as system user
-app.use(pantheon.lib.middleware.auth)
+app.use(pantheonMiddleware.auth(conf))
 
 # attach a nano couch client authenticated as the
 # logged-in user to the request object
 # access via `req.couch`
-app.use(pantheon.lib.middleware.couch)
+app.use(pantheonMiddleware.couch)
 
 # api routes
 routes(app)

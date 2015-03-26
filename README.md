@@ -461,10 +461,10 @@ To have a working app, now all we need to do is set up our api.
 
 We have two endpoints: `/boulders` and `boulders/:boulderId`.
 We will correspondingly implement our route handlers in
-`$SISYPHUS/api/boulders.coffee`
-and `$SISYPHUS/api/boulder.coffee`.
+`$SISYPHUS/src/api/boulders.coffee`
+and `$SISYPHUS/src/api/boulder.coffee`.
 
-$SISYPHUS/api/boulders.coffee:
+$SISYPHUS/src/api/boulders.coffee:
 
 ```coffeescript  
 doAction = require('pantheon-helpers/lib/do_action').doAction
@@ -502,7 +502,7 @@ This is very memory efficient.
 Node does not have to receive the entire couch response into memory before sending it to the client. 
 Instead, it just acts as a proxy, forwarding the CouchDB response to the client as it is received.
 
-$SISYPHUS/api/boulder.coffee:
+$SISYPHUS/src/api/boulder.coffee:
 
 ```coffeescript
 doAction = require('pantheon-helpers/lib/do_action').doAction

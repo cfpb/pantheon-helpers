@@ -10,4 +10,4 @@ module.exports = (dbClient, designDocName, docId, action, callback) ->
   action - a hash defining the action. must contain `{a: 'actionId'}`; may contain uuid, `id`.
   ###
   _.defaults(action, {id: uuid.v4()})
-  return db.atomic(designDocName, 'do_action', docId, action, callback)
+  return dbClient.atomic(designDocName, 'do_action', docId, action, callback)

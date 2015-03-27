@@ -13,6 +13,13 @@ app = express()
 # set to 'application/json'
 app.use(bodyParser.json())
 
+# if you wish to enable cookie sessions, 
+# create a secret key ./config_secret.coffee and
+# uncomment the following lines:
+# session = require('cookie-session')
+# app.use(session({secret: conf.SECRET_KEY, name: 'express_sess'}))
+
+
 # allow system user to login with basic auth
 # prohibit everything else
 # if conf.DEV == true (for testing), then

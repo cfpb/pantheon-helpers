@@ -8,7 +8,7 @@ v =
   validate_doc_update: (validation_fns, get_doc_type, should_skip_validation_for_user) ->
     should_skip_validation_for_user or= () -> false
     return (new_doc, old_doc, user_ctx, sec_obj) ->
-      doc_type = get_doc_type(old_doc)
+      doc_type = get_doc_type(old_doc or new_doc)
       actions = validation_fns[doc_type]
       new_audit_entries = v.get_new_audit_entries(new_doc, old_doc)
 

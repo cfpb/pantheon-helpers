@@ -1,4 +1,3 @@
-couch_utils = require('./couch_utils')
 basic_auth = require('basic-auth')
 
 
@@ -15,12 +14,14 @@ module.exports =
           credentials.name == SYSTEM_USER and
           credentials.pass = conf.COUCH_PWD
          )
+        req.session or= {}
         req.session.user = SYSTEM_USER
         return next()
       else
         return resp.status(401).end(JSON.stringify({error: "unauthorized", msg: "You are not authorized."}))
 
-  couch: (req, resp, next) ->
-    # add to the request a couch client tied to the logged in user
-    req.couch = couch_utils.nano_user(req.session.user)
-    return next()
+  couch: (couch_utils) ->
+    (req, resp, next) ->
+      # add to the request a couch client tied to the logged in user
+      req.couch = couch_utils.nano_user(req.session.user)
+      return next()

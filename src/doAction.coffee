@@ -1,5 +1,5 @@
 _ = require('underscore')
-uuid = require('uuid')
+uuid = require('node-uuid')
 
 module.exports = (dbClient, designDocName, docId, action, callback) ->
   ###

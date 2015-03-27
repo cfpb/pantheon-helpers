@@ -467,7 +467,7 @@ and `$SISYPHUS/src/api/boulder.coffee`.
 $SISYPHUS/src/api/boulders.coffee:
 
 ```coffeescript  
-doAction = require('pantheon-helpers/lib/do_action').doAction
+doAction = require('pantheon-helpers/lib/doAction')
 
 b = {}
 
@@ -505,7 +505,7 @@ Instead, it just acts as a proxy, forwarding the CouchDB response to the client 
 $SISYPHUS/src/api/boulder.coffee:
 
 ```coffeescript
-doAction = require('pantheon-helpers/lib/do_action').doAction
+doAction = require('pantheon-helpers/lib/doAction')
 
 b = {}
 

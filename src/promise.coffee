@@ -5,7 +5,6 @@ resolve = require('url').resolve
 parse_links = require('parse-links')
 utils = require('./utils')
 timers = require('timers')
-nano = require('nano')
 
 Promise.resolveAll = (promiseArray) ->
   """

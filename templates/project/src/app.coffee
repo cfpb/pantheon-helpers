@@ -1,9 +1,9 @@
 pantheonMiddleware = require('pantheon-helpers/lib/middleware')
 conf = require('./config')
+couch_utils = require('./couch_utils')
 
 express = require('express')
 bodyParser = require('body-parser')
-session = require('cookie-session')
 routes = require('./routes')
 
 # create application
@@ -22,7 +22,7 @@ app.use(pantheonMiddleware.auth(conf))
 # attach a nano couch client authenticated as the
 # logged-in user to the request object
 # access via `req.couch`
-app.use(pantheonMiddleware.couch)
+app.use(pantheonMiddleware.couch(couch_utils))
 
 # api routes
 routes(app)

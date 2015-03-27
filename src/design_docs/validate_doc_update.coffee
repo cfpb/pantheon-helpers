@@ -25,7 +25,7 @@ v =
     old_log = if old_doc then old_doc.audit else []
     old_entries = new_log.slice(0, old_log.length)
     if not _.isEqual(old_log, old_entries)
-      throw({ forbidden: 'Entries are immutable.' })
+      throw({ forbidden: 'Entries are immutable. original entries: ' + JSON.stringify(old_log) + '; modified entries: ' + JSON.stringify(old_entries) + '.' })
     new_entries = new_log.slice(old_log.length)
     return new_entries
 

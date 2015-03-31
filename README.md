@@ -390,7 +390,7 @@ In `$SISYPHUS/src/worker.coffee`:
 db = couch_utils.nano_system_user.use('boulders')
 
 # return a promise, rather than using callbacks
-pDoAction = require('pantheon-helpers/lib/do_action').pDoAction
+doAction = require('pantheon-helpers/lib/doAction')
 Promise = require('pantheon-helpers/lib/promise')
 
 handlers: {
@@ -399,7 +399,7 @@ handlers: {
     'bu': (event, doc) ->
       # wait two minutes, then fire off a 'bd' event
       Promise.setTimeout(120000).next(() ->
-        pDoAction(db, doc._id, {a: 'bd'})
+        doAction(db, doc._id, {a: 'bd'})
       ).next(() ->
         # determine how Zeus felt about it
         zeus_response = _.sample([
@@ -411,7 +411,7 @@ handlers: {
     'bd': (event, doc) ->
       # wait 20 second, then fire off a 'br' event
       Promise.setTimeout(20000).next(() ->
-        pDoAction(db, doc._id, {a: 'br'})
+        doAction(db, doc._id, {a: 'br'})
       ).next(() ->
         # determine how Zeus felt about it
         zeus_reaction = _.sample(['expectant'])

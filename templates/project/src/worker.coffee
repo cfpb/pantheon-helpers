@@ -13,7 +13,7 @@ get_doc_type = (doc) ->
   throw new Error('not implemented')
 
 # _users worker
-db = couch_utils.nano_admin.use('db_name')
+db = couch_utils.nano_system_user.use('db_name')
 worker.start_worker(db,
                     handlers,
                     get_handler_data_path,

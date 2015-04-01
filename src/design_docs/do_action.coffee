@@ -6,19 +6,19 @@ catch err
 
 module.exports = (action_handlers, get_doc_type, prep_doc) ->
   (doc, req) ->
-    if not doc
-      return [null, '{"status": "error", "msg": "doc not found"}']
-
     action = JSON.parse(req.body)
     action_name = action.a
     actor = req.userCtx
-    doc_type = get_doc_type(doc)
-
+    if doc
+      doc_type = get_doc_type(doc)
+    else
+      doc_type = 'create'
     action_handler = action_handlers[doc_type]?[action_name]
 
     if not action_handler
       return [null, '{"status": "error", "msg": "invalid action"}']
 
+    doc or= {_id: req.uuid, audit: []}
     old_doc = JSON.parse(JSON.stringify(doc)) # clone original to check if change
 
     try
@@ -35,5 +35,10 @@ module.exports = (action_handlers, get_doc_type, prep_doc) ->
       })
       doc.audit.push(action)
       write_doc = doc
-    out_doc = if prep_doc then prep_doc(doc) else doc
+    if prep_doc
+      out_doc = JSON.parse(JSON.stringify(doc))
+      out_doc = prep_doc(out_doc)
+    else
+      out_doc = doc
+
     return [write_doc, JSON.stringify(out_doc)]

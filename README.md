@@ -1,98 +1,550 @@
-#### CFPB Open Source Project Template Instructions
+# Pantheon Helpers
 
-1. Create a new project.
-2. Copy these files into the new project.
-3. Update the README, replacing the contents below as prescribed.
-4. Add any libraries, assets, or hard dependencies whose source code will be included
-   in the project's repository to the _Exceptions_ section in the [TERMS](TERMS.md).
-  - If no exceptions are needed, remove that section from TERMS.
-5. If working with an existing code base, answer the questions on the [open source checklist](opensource-checklist.md) 
-6. Delete these instructions and everything up to the _Project Title_ from the README.
-7. Write some great software and tell people about it.
+## Description
+The CFPB Pantheon of microservices help medium-sized development teams get their work done.
+Pantheon Helpers is a small Node.js library to make it easier to build a microservice in Node.js with CouchDB.
 
-> Keep the README fresh! It's the first thing people see and will make the initial impression.
+## Features
+This library makes it easy to build an application with the following features:
 
-----
+  * auditing
+  * validation
+  * rapid developement with a build script, and helpers for useful CouchDB and async promise patterns
+  * asyncronous server actions to provide snappy api response times even when the actions kicked off by the api take a long time
 
-# Project Title
+Pantheon helpers provide a framework for handling "actions".
+You:
+  1. Define the actions your application will perform.
+  2. Write an action transform function for each action. 
+     The transform function takes an action and a CouchDB document,
+     and idempotently transforms the document as required by the action.
+  3. Write a validation function for each action.
+     The validation function takes the action,
+     the user who performed the action (the actor),
+     and the old and new doc. It throws an error if
+     the action was invalid or unauthorized.
+  4. Write an asyncronous worker handler for any actions that result in side-effects. 
+     The worker handler will be called _after_ the document has been written to the database,
+     and _after_ a response has been sent to the client performing the action.
+     The worker handler can run any slow, asyncronous code that the user shouldn't have to wait to complete before getting a response.
+       For instance, updating a remote server with data uploaded by the action.
 
-**Description**:  Put a meaningful, short, plain-language description of what
-this project is trying to accomplish and why it matters. 
-Describe the problem(s) this project solves.
-Describe how this software can improve the lives of its audience.
-
-Other things to include:
-
-  - **Technology stack**: Indicate the technological nature of the software, including primary programming language(s) and whether the software is intended as standalone or as a module in a framework or other ecosystem.
-  - **Status**:  Alpha, Beta, 1.1, etc. It's OK to write a sentence, too. The goal is to let interested people know where this project is at. This is also a good place to link to the [CHANGELOG](CHANGELOG.md).
-  - **Links to production or demo instances**
-  - Describe what sets this apart from related-projects. Linking to another doc or page is OK if this can't be expressed in a sentence or two.
-
-
-**Screenshot**: If the software has visual components, place a screenshot after the description; e.g.,
-
-![](https://raw.githubusercontent.com/cfpb/open-source-project-template/master/screenshot.png)
-
-
-## Dependencies
-
-Describe any dependencies that must be installed for this software to work. 
-This includes programming languages, databases or other storage mechanisms, build tools, frameworks, and so forth.
-If specific versions of other software are required, or known not to work, call that out.
+Pantheon provides all the plumbing to ensure that these functions are run at the right time,
+in response to the right action,
+have the expected result,
+and are logged.
 
 ## Installation
 
-Detailed instructions on how to install, configure, and get the project running.
-This should be frequently tested to ensure reliability. Alternatively, a link to
-another page is fine, but it's important that this works.
+In your microservice application's home directory, run:
 
-## Configuration
+    npm install git+https://github.com/cfpb/pantheon-helpers.git
 
-If the software is configurable, describe it in detail, either here or in other documentation to which you link.
+    npm install -g coffee-script jasmine-node
 
 ## Usage
+For the remainder of this guide,
+we will be creating a microservice called "Sisyphus" in the directory `$SISYPHUS`.
+If you would like to follow along,
+create a directory for the project and run:
 
-Show users how to use the software. 
-Be specific. 
-Use appropriate formatting when showing code snippets.
+    export $SISYPHUS=/path/to/sisyphus/directory
 
-## How to test the software
+Our microservice will have endpoints to let us:
 
-If the software includes automated tests, detail how to run those tests.
+  * create a boulder
+  * start rolling the boulder up the hill
+  * set the boulder rolling back down the hill
+  * get the current state of the boulder
 
-## Known issues
+The boulder will take 2 minutes to roll uphill,
+at which point it will escape Sisyphus 
+and roll down the hill for 20 seconds.
+Then the whole process can start over again.
 
-Document any known significant shortcomings with the software.
+### 1. Set up directory structure
+There should already be a node_modules directory with pantheon-helpers within it.
+If not, follow the installation instructions, above.
 
-## Getting help
+Execute the pantheon-helpers bootstrap script:
 
-Instruct users how to get help with this software; this might include links to an issue tracker, wiki, mailing list, etc.
+    $SISYPHUS/node_modules/pantheon-helpers/bootstrap
 
-**Example**
+You should now have the following directory structure:
 
-If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker.
+    $SISYPHUS
+      |- Cakefile: build tool. Run `cake` within $SISYPHUS
+         to see available commands and arguments
+      |- spec: jasmine tests go here; recreate the src 
+         directory structure to make it easy to find tests
+          |- apis: tests for api route handlers go here
+          |- design_docs: tests for design docs go here
+      |- src: coffeescript source files go here
+          |- config.coffee: configuration variables
+          |- config_secret.coffee: secret config variables;
+             ignored by git; imported by config.coffee
+          |- couch_utils.coffee: couch utilities, bound to your
+             couchdb instance defined in your config files
+          |- app.coffee: executing this file starts the
+             web server
+          |- worker.coffee: executing this file starts
+             any/all backround workers
+          |- .gitignore: ignores config_secret
+          |- apis: api route handlers go here
+          |- design_docs: files to be imported by Kanso
+               into CouchDB design docs go here
+      |- lib: javascript compiled from ./src by 
+              `cake build` will go here
+          |- design_docs: some uncompiled javascript 
+             generated by `cake start_design_doc` will
+             go here
 
-## Getting involved
+To complete the setup, 
+You will need to set your CouchDB config variables so Sisyphus can access CouchDB:
 
-This section should detail why people should get involved and describe key areas you are
-currently focusing on; e.g., trying to get feedback on features, fixing certain bugs, building
-important pieces, etc.
+  $SISYPHUS/src/config.coffee
 
-General instructions on _how_ to contribute should be stated with a link to [CONTRIBUTING](CONTRIBUTING.md).
-
-
-----
-
-## Open source licensing info
-1. [TERMS](TERMS.md)
-2. [LICENSE](LICENSE)
-3. [CFPB Source Code Policy](https://github.com/cfpb/source-code-policy/)
+system username --
+the username your application uses to log into CouchDB
+-- and the CouchDB password that user uses.
 
 
-----
+### 2. Getting ready to work
+Run `cake watch`. This will watch for changes to .coffee files and compile them to javascript.
 
-## Credits and references
 
-1. Projects that inspired you
-2. Related projects
-3. Books, papers, talks, or other sources that have meaniginful impact or influence on this project 
+### 3. Set up your CouchDB database
+#### CouchDB credentials
+Add your CouchDB credentials to $SISYPHUS/src/config.coffee and $SISYPHUS/src/config_secret.coffee. You will need to specify a username and password with which to access couchdb. Make sure the password is in config_secret.coffee.
+
+You should see that the `cake watch` recompiles both config files as soon as you save them. 
+If you don't use `cake watch` you will need to run `cake build` every time you make a change.
+
+
+#### Design documents
+We use [Kanso](http://kan.so/) to load Design Docs into CouchDB. 
+Design Docs let us run custom code on CouchDB in a fashion similar to stored procedures in RDBMSs.
+You should [familiarize yourself with CouchDB Design Docs](http://guide.couchdb.org/draft/design.html), if you are not already.
+
+A CouchDB instance can have many databases. Each database can have
+many design docs. It can become difficult to ensure design docs remain
+up-to-date across all databases. Pantheon-helpers helps you manage your design docs.
+
+To create a new design doc, run:
+
+    cake start_design_doc
+
+and enter `boulder` for name and `base boulder DB design doc` for description.
+
+Now we have a skeleton design doc in `$SISYPHUS/src/design_docs/boulder`. 
+The `./lib/app.coffee` is the primary entry point into your
+design doc.
+If you take a look, it has placeholders for some of the more common design document features.
+Of particular note, are `audit.mixin` and `actions.mixin`. 
+These add the actions functionality (from `./lib/actions.coffee`)
+and audit functionality (from pantheon-helpers) to your design doc.
+We will be modifying `./lib/actions.coffee` later to 
+create the actions our app can perform.
+
+If you look in `$SISYPHUS/lib/design_docs/boulder`,
+you will see some files that are not in source. First, is the `kanso.json` file, this is similar to node.js `package.json` or a bower `bower.json` file.
+It tells kanso what to package up and send to couchdb.
+
+Next, in the `lib` subdirectory you will see a copy of underscore, and a symlink to the `pantheon-helpers/lib/design_docs` folder. Any files that you want to reference in your design doc must be in the `boulder` directory, otherwise Kanso can't package them up.
+So we add them here.
+
+Now that we have created our design document,
+we have associate it with a type of database.
+To do this, we create a new file at
+$SISYPHUS/src/design_docs/boulders.coffee with the following contents:
+
+    module.exports = ['boulder']
+
+This tells Pantheon to add the `boulder` design doc to every
+single database in CouchDB that starts with the string `boulders`.
+If we wanted all databases that start with `boulders` to also
+have another design doc installed, we would add the name of the desired design doc to the experted array.
+
+### 3. Design the Sisyphus microservice
+Rolling the boulder up the hill takes a long time (in web time): 2 minutes. 
+When we make a request to roll the boulder up the hill,
+we do not want to have to wait two minutes for a response.
+Instead, we would like to receive a response instantly that our request to roll the boulder up the hill has been accepted and is being processed.
+Then we want a background process to actually roll the boulder up the hill for two minutes.
+
+Pantheon-helpers makes it easy to build this sort of decoupled application.
+First, let's figure out what our data is going to look like,
+then let's figure out what actions we want to be able to perform on that data. Finally, we'll implement everything.
+
+Our boulder is going to be represented by a json document.
+We want to know whether it's rolling up the hill,
+rolling down the hill, or at the bottom of the hill.
+We're also curious about Zeus's reaction to events as they unfold.
+We'll store Zeus's reaction to the most recent action right in the boulder document.
+Thus, our json document will look like this:
+
+    { "_id": "document ID"
+    , "type": "boulder"
+    , "status": "rolling up|rolling down|at bottom"
+    , "zeus": 
+      { "is": "expectant|delighted|satisfied|mirthful|vengeful"
+      }
+    }
+
+That's pretty easy! 
+We don't even have to worry about the _id.
+CouchDB will create one for us if we don't set it explicitly.
+
+We are going to need to transform our boulder document in four different ways:
+
+  1. create a new boulder (`b+`)
+  2. start rolling the boulder up the hill (`bu`)
+  3. make the boulder slip away and roll back down the hill (`bd`)
+  4. bring the boulder to rest at the bottom of the hill (`br`)
+
+Obviously, we can never destroy a boulder since this is an eternal task.
+Note that not all of these actions are actually correspond to an endpoint. 
+For example, 
+a `br` will only ever be called by a worker handling a `bd` event.
+
+### 4. Testing
+Testing is easy because the system is loosely coupled,
+and each function you write 
+(with the exception of worker handlers)
+should have no side effects.
+
+Because it is so easy, you should be writing a ton of tests.
+
+You run your tests with `cake test`.
+You will be writing your tests using jasmine-node,
+so you will need to write tests against the [v1.3 api](http://jasmine.github.io/1.3/introduction.html).
+
+You should set up $SISYPHUS/spec to mirror your $SISYPHUS/src directory.
+Tests for, e.g., $SISYPHUS/src/design_docs/boulder/lib/actions.coffee 
+should go in $SISYPHUS/src/design_docs/boulder/lib/actionsSpec.coffee.
+The `Spec` postfix is needed so jasmine-node
+
+You should make liberal use of jasmine spys to mock and spy on external dependencies.
+
+There is already a .travis.yml file in your project skeleton.
+All you need to do is turn your repo on in travis-ci.
+
+### 5. Implement CouchDB actions
+We will define our actions in `src/design_docs/boulder/lib/actions.coffee`.
+We need to define:
+  1. how to actually do the action, and
+  2. how to validate when an action is allowed
+
+Since most applications will have more than just one
+document type, we define functions in relation to the
+document type they can operate on.
+We must also tell Pantheon-helpers how to tell the difference between document types.
+
+In `src/design_docs/boulder/lib/actions.coffee`
+
+```coffeescript
+...
+
+# define our get_doc_type function.
+# will return boulder for boulder types
+get_doc_type = (doc) -> return doc.type
+
+# define our action handlers that will actually modify our doc
+# in response to actions.
+a.do_actions = {
+  # we define all actions that can be performed on boulder docs
+  boulder: {
+    # an action is a function that receives the doc to be
+    # acted on, the action to be performed, and the
+    # user performing the action. It must update the
+    # doc in place. The do_action framework ensures that the
+    # document is saved only if the action handler actually
+    # changed the document.
+    'bu': (doc, action, actor) ->
+      doc.status = 'rolling up'
+    'bd': (doc, action, actor) ->
+      doc.status = 'rolling down'
+  }
+  # we define all actions that create new docs here (since we 
+  # wouldn't know the type of a new doc until after it is created)
+  create: {
+    'b+': (doc, action, actor) ->
+      doc.type = 'boulder'
+      doc.status = 'at bottom'
+  }
+}
+
+# define our validation handlers that ensure that the action is valid.
+a.validate_actions = {
+  # we define validation handlers for our boulder docs
+  boulder: {
+    # throw an error if the action is invalid;
+    bu: (event, actor, old_doc, new_doc) ->
+      if old_doc.status != 'at bottom'
+        throw {
+          state: 'invalid', 
+          err: 'cannot start rolling boulder up until it reaches bottom'
+        }
+    bd: (event, actor, old_doc, new_doc) ->
+      if old_doc.status != 'rolling up'
+        throw {
+          state: 'invalid',
+          err: 'cannot roll down until boulder has started rolling up'
+        }
+
+    # You must define a validation function for all
+    # valid actions, even if there is no validation logic.
+    # Since b+ is always valid, we have an empty method.
+
+    # Validation for b+ is under the boulder doc_type, 
+    # because the action handler defined above has already
+    # run and the boulder document has been created by this point.
+    b+: (event, actor, old_doc, new_doc) ->
+  }
+}
+
+# we want to show how far up the hill Sisyphus is. 
+# but we don't want to store this - it will change 
+# moment by moment - so we are going to create a doc_prep
+# function that takes a document and prepares it for
+# display. If you are offended by the horrible hackiness
+# of these calculations, you are encouraged to submit a 
+# pull request.
+
+# Now, whenever you perform an action, you will receive back
+# a copy of the document with any modifications made by the
+# prep_boulder_for_display function.
+
+prep_boulder_for_display = (bouldDoc) ->
+  # get the most recent action for this boulder
+  last_action = bouldDoc.audit[bouldDoc.audit.length-1]
+
+  now = +new Date()
+  if not last_action or last_action.a = 'br'
+    bouldDoc.hillPosition = 0
+
+  else if last_action.a == 'bu'
+    bouldDoc.hillPosition = Math.floor((now - last_action.dt)*.9/120, .9)
+
+  else if last_action.a == 'bd'
+    bouldDoc.hillPosition = Math.ceiling((now - last_action.dt)*.9/20, 0)
+
+a.do_action = do_action(
+                a.do_actions,
+                get_doc_type,
+                prep_boulder_for_display,
+              )
+...
+```
+
+We have now defined how an action modifies a document, and we have defined when an action is valid.
+
+A couple of notes:
+  * Handler and validation functions cannot have any side effects.
+    You can't make http requests or grab other documents.
+  * Validation functions must throw either 
+    {state: 'invalid', err: 'msg'} or {state: 'unauthorized', err: 'msg'}
+
+We have now setup our design documents so CouchDB can handle our actions. How do we actually perform an action from Node.js? Pantheon-helpers provides a helper function, `doAction` to make this easy:
+
+```coffeescript  
+# get an authenticated couch client pointing to the boulders database
+db = require('./couch_utils').nano_system_user.use('boulders')
+
+# import the do_action method
+doAction = require('pantheon-helpers/lib/doAction')
+
+# do the action, passing in the database, the design document name where the action is defined, the document ID (or `null` if this action creates a new doc), and the action.
+
+# create a boulder
+doAction(db, 'boulder', null, {a: 'b+'}, (err, boulder_doc) ->
+  # start rolling the boulder up the hill
+  doAction(db, 'boulder', boulder_doc._id, {a: 'bu'})
+)
+```
+
+As you can see, an action is just a dictionary.
+The action id is specified by the `a` key.
+You can use any other keys you like, with the
+exception of the reserved system keys:
+`dt` (datetime stamp), `u` (user performing action),
+and `id` (uuid of the action)
+The entire action dictionary is passed to your handler,
+validation, and worker functions, and is stored in the
+audit log.
+
+
+### 6. Create background worker
+Our actions now modify our document, but they don't do anything in "real life". Let's change that.
+
+Our background worker watches the database for changes.
+Whenever an event happens,
+the Worker will find the appropriate worker function for that event
+and call it.
+
+In `$SISYPHUS/src/worker.coffee`:
+
+```coffeescript
+...
+
+db = couch_utils.nano_system_user.use('boulders')
+
+# return a promise, rather than using callbacks
+doAction = require('pantheon-helpers/lib/doAction')
+Promise = require('pantheon-helpers/lib/promise')
+
+handlers: {
+  # worker functions for boulder documents
+  boulder:
+    'bu': (event, doc) ->
+      # wait two minutes, then fire off a 'bd' event
+      Promise.setTimeout(120000).next(() ->
+        doAction(db, doc._id, {a: 'bd'})
+      ).next(() ->
+        # determine how Zeus felt about it
+        zeus_response = _.sample([
+          'delighted', 'satisfied', 'mirthful', 'vengeful'
+        ])
+        # return that Zeus's response so we can store in in doc.
+        Promise.resolve({is: zeus_response})
+      )
+    'bd': (event, doc) ->
+      # wait 20 second, then fire off a 'br' event
+      Promise.setTimeout(20000).next(() ->
+        doAction(db, doc._id, {a: 'br'})
+      ).next(() ->
+        # determine how Zeus felt about it
+        zeus_reaction = _.sample(['expectant'])
+        # return Zeus's reaction so we can store in in doc.
+        # note that we _must_ return a promise, not a raw value.
+        # the value returned by a handler must be a dictionary
+        Promise.resolve({is: zeus_reaction})
+      )
+    # we don't need to do anything when a boulder is created or comes to rest
+    'b+': null
+    'br': null
+}
+
+# worker functions can return data to store in the document.
+# you might use this to store an external resource id,
+# or any other metadata you need to be able to interact 
+# with the external world.
+
+# We are storing Zeus's reaction to Sisyphus's suffering.
+# Since every document is different, we have to tell the
+# worker where we want to put the data returned by the worker
+# function. It should be an array that defines a path 
+# into the nested json document. The path should point to 
+# a dictionary. The data returned by the worker function will
+# be merged with any existing data in the dictionary.
+
+get_handler_data_path = (doc_type) ->
+  return ['zeus']
+
+# this is the same function we defined in our design doc
+get_doc_type = (doc) -> return doc.type
+
+...
+```
+
+A couple things:
+  * Worker handlers MUST return a promise.
+  * Any data returned in the promise will be merged into the
+    document at the path specified by `get_handler_data_path(doc_type)`.
+  * If your worker handler errors out, then the event will be marked
+    as having errored.
+    While not implemented yet, pantheon-helpers will eventually log the exact error and retry at a later time
+
+
+### 7. Create the API
+To have a working app, now all we need to do is set up our api.
+
+We have two endpoints: `/boulders` and `boulders/:boulderId`.
+We will correspondingly implement our route handlers in
+`$SISYPHUS/src/api/boulders.coffee`
+and `$SISYPHUS/src/api/boulder.coffee`.
+
+$SISYPHUS/src/api/boulders.coffee:
+
+```coffeescript  
+doAction = require('pantheon-helpers/lib/doAction')
+
+b = {}
+
+b.createBoulder = (db, callback) ->
+  return doAction(db, 'boulder', null, {a: 'b+'}, callback)
+
+b.handleCreateBoulder = (req, resp) ->
+  db = req.couch.use('boulder')
+  b.createBoulder(db).pipe(resp)
+
+module.exports = b
+```
+
+And that's it. Let's unpack this a bit. 
+We created two functions:
+`createBoulder` and `handleCreateBoulder`.
+This is a convention used throughout the pantheon. 
+The plain `createBoulder` does the actual work.
+The `handleCreateBoulder` handles an http request by calling `createBoulder`.
+This way, you can perform api actions within your application without
+making an http request. It also makes testing easier.
+
+`handleCreateBoulder` gets a CouchDB client from req.couch.
+req.couch is a CouchDB client that has been authenticated as
+whichever user authenticated against your application. 
+This way, your validation functions in couch can also handle authorization.
+
+You'll also notice that we did not pass a callback to b.createBoulder.
+b.createBoulder returns a stream of the CouchDB response.
+We can then pipe that response directly to our response object.
+This is very memory efficient. 
+Node does not have to receive the entire couch response into memory before sending it to the client. 
+Instead, it just acts as a proxy, forwarding the CouchDB response to the client as it is received.
+
+$SISYPHUS/src/api/boulder.coffee:
+
+```coffeescript
+doAction = require('pantheon-helpers/lib/doAction')
+
+b = {}
+
+b.getBoulder = (db, boulderId, callback) ->
+  return db.get(boulderId, callback)
+
+b.rollBoulderUp = (db, boulderId, callback) ->
+  return doAction(db, 'boulder', boulderId, {a: 'bu'}, callback)
+
+b.handleRollBoulderUp = (req, resp) ->
+  db = req.couch.use('boulder')
+  boulderId = req.params.boulderId
+  b.rollBoulderUp(db, boulderId).pipe(resp)
+
+b.rollBoulderDown = (db, boulderId, callback) ->
+  return doAction(db, 'boulder', boulderId, {a: 'bd'}, callback)
+
+b.handleRollBoulderDown = (req, resp) ->
+  db = req.couch.use('boulder')
+  boulderId = req.params.boulderId
+  b.rollBoulderDown(db, boulderId).pipe(resp)
+
+module.exports = b
+```
+
+$SISYPHUS/routes.coffee:
+
+```coffeescript
+boulders = require('./api/boulders')
+boulder = require('./api/boulder')
+
+module.exports = (app) ->
+  app.post('/sisyphus/boulders/', boulders.handleCreateBoulder)
+
+  app.get('/sisyphus/boulders/:boulderId', boulder.handleGetBoulder)
+  app.put('/sisyphus/boulders/:boulderId/state/down', boulder.handleRollBoulderDown)
+  app.put('/sisyphus/boulders/:boulderId/state/up', boulder.handleRollBoulderUp)
+```
+
+You now have a fully functioning application with auditing and a background worker process. Soon, you will get logging as well.
+
+Thanks for reading!

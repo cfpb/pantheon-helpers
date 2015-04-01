@@ -3,7 +3,7 @@ v = require('../../lib/design_docs/validate_doc_update')
 describe 'validate_doc_update', () ->
   beforeEach () ->
     this.get_doc_type = jasmine.createSpy('get_doc_type').andReturn('team')
-    this.should_ignore_user = jasmine.createSpy('should_ignore_user').andReturn(false)
+    this.should_skip_validation_for_user = jasmine.createSpy('should_skip_validation_for_user').andReturn(false)
     this.validation_fns = {
       team: {
         'u+': 'handle_u+'
@@ -12,7 +12,7 @@ describe 'validate_doc_update', () ->
     }
     spyOn(v, 'get_new_audit_entries').andReturn(['entry', 'entry2'])
     spyOn(v, 'validate_audit_entries')
-    this.validate_doc_update = v.validate_doc_update(this.validation_fns, this.get_doc_type, this.should_ignore_user)
+    this.validate_doc_update = v.validate_doc_update(this.validation_fns, this.get_doc_type, this.should_skip_validation_for_user)
 
   it 'gets the doc type from the passed get_doc_type fn', () ->
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
@@ -22,8 +22,8 @@ describe 'validate_doc_update', () ->
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
     expect(v.get_new_audit_entries).toHaveBeenCalledWith('new_doc', 'old_doc')
 
-  it 'does not run validation if the should_ignore_user returns false for the actor (user_ctx)', () ->
-    this.should_ignore_user.andReturn(true)
+  it 'does not run validation if the should_skip_validation_for_user returns false for the actor (user_ctx)', () ->
+    this.should_skip_validation_for_user.andReturn(true)
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
     expect(v.validate_audit_entries).not.toHaveBeenCalled()
 
@@ -41,7 +41,11 @@ describe 'validate_doc_update', () ->
     this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
     expect(v.validate_audit_entries).toHaveBeenCalledWith(this.validation_fns.team, ['entry', 'entry2'], 'user_ctx', 'old_doc', 'new_doc')
 
-
+  it 'does not require a should_skip_validation_for_user method; defaults to skipping nothing', () ->
+    v.validate_doc_update(this.validation_fns, this.get_doc_type)
+    this.validate_doc_update('new_doc', 'old_doc', 'user_ctx', 'sec_obj')
+    expect(v.validate_audit_entries).toHaveBeenCalled()
+ 
 describe 'get_new_audit_entries', () ->
   beforeEach () ->
     this.old_doc = {audit: [1,2]}
@@ -85,7 +89,8 @@ describe 'validate_audit_entry', () ->
   beforeEach () ->
     this.actions = {
       'success': jasmine.createSpy('success').andReturn(true)
-      'fail': jasmine.createSpy('fail').andReturn(false)
+      'auth_fail': jasmine.createSpy('auth_fail').andCallFake(() -> throw({state: 'unauthorized', err: 'authorization error'}))
+      'validation_fail': jasmine.createSpy('validation_fail').andCallFake(() -> throw({state: 'invalid', err: 'validation error'}))
     }
     this.entry = {
       u: 'user1',
@@ -97,21 +102,27 @@ describe 'validate_audit_entry', () ->
 
   it 'throws an error if the entry user is not the same as the actor', () ->
     this.actor.name = 'user2'
-    expect(() ->
+    expect(() =>
       v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
     ).toThrow()
 
   it 'throws an error if the action type has no corresponding validation function in the actions', () ->
     this.entry.a = 'not_an_action'
-    expect(() ->
+    expect(() =>
       v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
     ).toThrow()
 
   it 'does nothing if the validation passes', () ->
     v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
 
-  it 'throws an error if validation fails', () ->
-    this.entry.a = 'fail'
-    expect(() ->
+  it 'throws an auth error if there is an auth failure', () ->
+    this.entry.a = 'auth_fail'
+    expect(() =>
       v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
-    ).toThrow()
+    ).toThrow({unauthorized: 'authorization error'})
+
+  it 'throws an invalid error if there is a validation failure', () ->
+    this.entry.a = 'validation_fail'
+    expect(() =>
+      v.validate_audit_entry(this.actions, this.entry, this.actor, 'old_doc', 'new_doc')
+    ).toThrow({forbidden: 'validation error'})

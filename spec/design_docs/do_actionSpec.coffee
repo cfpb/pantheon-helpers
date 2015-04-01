@@ -10,6 +10,10 @@ describe 'do_action', () ->
           team.data.a = 'same'
         error: (team, action, actor) ->
           throw ('error handler error')
+      create: 
+        create_team: (team, action, actor) ->
+          team.data = {}
+
     this.action = {
       a: 'success',
       k: 'k',
@@ -18,6 +22,7 @@ describe 'do_action', () ->
     this.req = {
       userCtx: {name: '1234e3df'}
       body: JSON.stringify(this.action)
+      uuid: 'couch-provided-uuid'
     }
     this.doc = {_id: 'team_test', data: {a:'same'}, audit: []}
     this.prep_doc = (doc) -> 
@@ -26,10 +31,6 @@ describe 'do_action', () ->
     this.get_doc_type = (doc) ->
       return 'team'
     this.do_action = do_action(this.actions, this.get_doc_type)
-
-  it 'errors if no doc provided', () ->
-    actual = this.do_action(null, this.req)
-    expect(actual).toEqual([null, '{"status": "error", "msg": "doc not found"}'])
 
   it 'errors if no valid action', () ->
     this.action.a = 'x'
@@ -55,6 +56,14 @@ describe 'do_action', () ->
     actual = this.do_action(this.doc, this.req)
     expect(this.actions.team.success).toHaveBeenCalledWith(this.doc, this.action, this.req.userCtx)
 
+  it 'gets a create handler if there is no doc, and calls handler with a skeleton doc, action and actor', () ->
+    spyOn(this.actions.create, 'create_team')
+    this.action.a = 'create_team'
+    this.req.body = JSON.stringify(this.action)
+
+    actual = this.do_action(null, this.req)
+    expect(this.actions.create.create_team).toHaveBeenCalledWith({_id: 'couch-provided-uuid', audit: []}, this.action, this.req.userCtx)
+
   it 'does not save the doc if the doc has not changed', () ->
     this.action.a = 'noop'
     this.req.body = JSON.stringify(this.action)
@@ -78,3 +87,7 @@ describe 'do_action', () ->
   it 'returns the display doc after running it through prep_doc fn, and stringifying it', () ->
     actual = do_action(this.actions, this.get_doc_type, this.prep_doc)(this.doc, this.req)
     expect(JSON.parse(actual[1]).prepped).toEqual(true)
+
+  it 'ensures the stored document is not modified by the prep_doc fn', () ->
+    actual = do_action(this.actions, this.get_doc_type, this.prep_doc)(this.doc, this.req)
+    expect(actual[0].prepped).toBeUndefined()

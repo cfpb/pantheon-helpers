@@ -5,22 +5,35 @@ Promise = require('promise')
 
 x = {}
 
+x.get_handlers = (handlers, entry, doc_type) ->
+  ###
+  return a hash of {null: handler}, where handler is the handler
+  for the entry/doc type combo.
 
-x.get_handlers = (resources, entry, doc_type) ->
+  you can subclass this function to return an arbitrary 
+  number of key/handler names. (see, e.g., get_resource_handlers)
+  ###
+  handler = handlers[doc_type]?[entry.a]
+  if handler
+    return {null: handler}
+  else
+    return {}
+
+x.get_plugin_handlers = (handlers, entry, doc_type) ->
   ###
   return a hash of {resource: handler} for each resource that
   has specified a handler for this entry's action.
   ###
   filtered_handlers = {}
-  for resource, handlers of resources
-    handler = handlers[doc_type]?[entry.a]
+  for plugin, plugin_handlers of handlers
+    handler = plugin_handlers[doc_type]?[entry.a]
     if not handler
-      if entry.k == resource
-        handler = handlers[doc_type]?.self?[entry.a]
+      if entry.k == plugin
+        handler = plugin_handlers[doc_type]?.self?[entry.a]
       else
-        handler = handlers[doc_type]?.other?[entry.a]
+        handler = plugin_handlers[doc_type]?.other?[entry.a]
     if handler
-      filtered_handlers[resource] = handler
+      filtered_handlers[plugin] = handler
   return filtered_handlers
 
 
@@ -63,7 +76,7 @@ x.update_audit_entries = (db, doc_id, doc_type, results, get_handler_data_path) 
   )
 
 
-x.on_change = (db, handlers, get_handler_data_path, get_doc_type) ->
+x.on_change = (db, handlers, get_handler_data_path, get_doc_type, get_handlers=x.get_handlers) ->
   return (change) ->
     doc = change.doc
     doc_type = get_doc_type(doc)
@@ -71,7 +84,7 @@ x.on_change = (db, handlers, get_handler_data_path, get_doc_type) ->
 
     entry_promises = {}
     _.each(unsynced_audit_entries, (entry) ->
-      entry_handlers = x.get_handlers(handlers, entry, doc_type)
+      entry_handlers = get_handlers(handlers, entry, doc_type)
       handler_promises = {}
       _.each(entry_handlers, (handler, rsrc) -> handler_promises[rsrc] = handler(entry, doc))
       entry_promises[entry.id] = Promise.hashResolveAll(handler_promises)

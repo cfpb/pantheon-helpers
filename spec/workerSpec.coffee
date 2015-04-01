@@ -3,9 +3,30 @@ worker = require('../lib/worker')
 Promise = require('promise')
 
 describe 'get_handlers', () ->
+  handlers = 
+    team:
+      'u+': '1u+'
+      'u-': '1u-'
+      'a+': '1sa+'
+      'a+': '1oa+'
 
-  resources = 
-    rsrc1:
+  event = {
+    a: 'u+',
+  }
+
+  it 'returns a single matching handler with a null key', () ->
+    event = {a: 'u+'}
+    actual = worker.get_handlers(handlers, event, 'team')
+    expect(actual).toEqual({null: '1u+'})
+
+  it 'only returns handlers that exist', () ->
+    event = {a: 'x-'}
+    actual = worker.get_handlers(handlers, event, 'team')
+    expect(actual).toEqual({})
+
+describe 'get_plugin_handlers', () ->
+  handlers = 
+    plugin1:
       team:
         'u+': '1u+'
         'u-': '1u-'
@@ -13,7 +34,7 @@ describe 'get_handlers', () ->
           'a+': '1sa+'
         other:
           'a+': '1oa+'
-    rsrc2:
+    plugin2:
       team:
         'u+': '2u+'
         self:
@@ -23,22 +44,23 @@ describe 'get_handlers', () ->
 
   event = {
     a: 'u+',
-    k: 'rsrc1',
+    k: 'plugin1',
   }
-  it 'returns a matching handler for each resource', () ->
+  it 'returns a matching handler for each plugin', () ->
     event = {a: 'u+'}
-    handlers = worker.get_handlers(resources, event, 'team')
-    expect(handlers).toEqual({rsrc1: '1u+', rsrc2: '2u+'})
+    actual = worker.get_plugin_handlers(handlers, event, 'team')
+    expect(actual).toEqual({plugin1: '1u+', plugin2: '2u+'})
 
-  it 'returns the self handler for the event resource and an other handler for all other resources', () ->
-    event = {a: 'a+', k: 'rsrc1'}
-    handlers = worker.get_handlers(resources, event, 'team')
-    expect(handlers).toEqual({rsrc1: '1sa+', rsrc2: '2oa+'})
+  it 'returns the self handler for the event plugin and an other handler for all other plugins', () ->
+    event = {a: 'a+', k: 'plugin1'}
+    actual = worker.get_plugin_handlers(handlers, event, 'team')
+    expect(actual).toEqual({plugin1: '1sa+', plugin2: '2oa+'})
 
   it 'only returns handlers that exist', () ->
     event = {a: 'u-'}
-    handlers = worker.get_handlers(resources, event, 'team')
-    expect(handlers).toEqual({rsrc1: '1u-'})
+    actual = worker.get_plugin_handlers(handlers, event, 'team')
+    expect(actual).toEqual({plugin1: '1u-'})
+
 
 
 describe 'get_unsynced_audit_entries', () ->
@@ -171,7 +193,6 @@ describe 'update_audit_entries', () ->
 describe 'on_change', () ->
   beforeEach () ->
     this.get_doc_type = jasmine.createSpy('get_doc_type').andReturn('doc_type')
-    this.on_change = worker.on_change('db', 'handlers', 'get_handler_data_path', this.get_doc_type)
 
     this.gh_handler = jasmine.createSpy('gh_handler').andReturn(Promise.resolve({new_data: true}))
     this.kratos_handler = jasmine.createSpy('gh_handler').andReturn(Promise.reject())
@@ -180,6 +201,7 @@ describe 'on_change', () ->
     spyOn(worker, 'get_unsynced_audit_entries').andReturn([{id: 'entry1'}, {id: 'entry2'}])
     spyOn(worker, 'update_audit_entries').andReturn(Promise.resolve())
     this.change = {doc: {_id: '123'}}
+    this.on_change = worker.on_change('db', 'handlers', 'get_handler_data_path', this.get_doc_type, worker.get_handlers)
 
     this.expected_results =
       entry1:

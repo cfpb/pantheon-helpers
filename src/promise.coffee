@@ -4,6 +4,7 @@ request = require('request')
 resolve = require('url').resolve
 parse_links = require('parse-links')
 utils = require('./utils')
+timers = require('timers')
 
 Promise.resolveAll = (promiseArray) ->
   """
@@ -66,6 +67,7 @@ Promise.RestClient = (defaults) ->
   Client.get_all = (opts) ->
     ###
     get all results (following link headers)
+    ** returns Promise **
     ###
     if typeof opts == 'string'
       opts = {url: opts}
@@ -86,6 +88,7 @@ Promise.RestClient = (defaults) ->
     ###
     keep getting results (using link headers)until we find 
     one that matches predicate or we reach last result.
+    ** returns Promise **
     ###
     if typeof opts == 'string'
       opts = {url: opts}
@@ -102,5 +105,9 @@ Promise.RestClient = (defaults) ->
     return Client.get(opts).then(handle_get)
 
   return Client
+
+Promise.setTimeout = Promise.denodeify((delay, args..., callback) ->
+  timers.setTimeout.apply(null, [callback, delay].concat(args))
+)
 
 module.exports = Promise

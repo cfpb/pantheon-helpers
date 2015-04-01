@@ -120,6 +120,12 @@ Add your CouchDB credentials to $SISYPHUS/src/config.coffee and $SISYPHUS/src/co
 You should see that the `cake watch` recompiles both config files as soon as you save them. 
 If you don't use `cake watch` you will need to run `cake build` every time you make a change.
 
+Now, we need to create the database in CouchDB.
+Go to `localhost:5984/_utils`, click "Create Database",
+and create a database called `boulders`.
+Replace `localhost:5984` with the host/port for your CouchDB instance.
+You may need to have an admin create the database for you.
+
 
 #### Design documents
 We use [Kanso](http://kan.so/) to load Design Docs into CouchDB. 
@@ -161,9 +167,10 @@ $SISYPHUS/src/design_docs/boulders.coffee with the following contents:
     module.exports = ['boulder']
 
 This tells Pantheon to add the `boulder` design doc to every
-single database in CouchDB that starts with the string `boulders`.
-If we wanted all databases that start with `boulders` to also
-have another design doc installed, we would add the name of the desired design doc to the experted array.
+single database that is (1) called `boulders` 
+or (2) starts with `boulders_`.
+If we wanted all those databases to also have another design doc installed, 
+we would add the name of the desired design doc to the exported array.
 
 ### 3. Design the Sisyphus microservice
 Rolling the boulder up the hill takes a long time (in web time): 2 minutes. 
@@ -206,6 +213,12 @@ Obviously, we can never destroy a boulder since this is an eternal task.
 Note that not all of these actions are actually correspond to an endpoint. 
 For example, 
 a `br` will only ever be called by a worker handling a `bd` event.
+
+Now that we have created our design doc, we need to sync it with CouchDB. Just run
+
+    Cake sync_design_docs
+
+This will update all the design documents in all your CouchDB databases.
 
 ### 4. Testing
 Testing is easy because the system is loosely coupled,
@@ -406,7 +419,7 @@ handlers: {
           'delighted', 'satisfied', 'mirthful', 'vengeful'
         ])
         # return that Zeus's response so we can store in in doc.
-        Promise.resolve({is: zeus_response})
+        Promise.resolve({data: {is: zeus_response} path: ['zeus']})
       )
     'bd': (event, doc) ->
       # wait 20 second, then fire off a 'br' event
@@ -418,42 +431,27 @@ handlers: {
         # return Zeus's reaction so we can store in in doc.
         # note that we _must_ return a promise, not a raw value.
         # the value returned by a handler must be a dictionary
-        Promise.resolve({is: zeus_reaction})
+        # the object pointed to by path into the doc must also be a dict.
+        # the object pointed to by path will be updated with the data dict's contents.
+        Promise.resolve({data: {is: zeus_reaction}, path: ['zeus']})
       )
     # we don't need to do anything when a boulder is created or comes to rest
     'b+': null
     'br': null
 }
 
-# worker functions can return data to store in the document.
-# you might use this to store an external resource id,
-# or any other metadata you need to be able to interact 
-# with the external world.
-
-# We are storing Zeus's reaction to Sisyphus's suffering.
-# Since every document is different, we have to tell the
-# worker where we want to put the data returned by the worker
-# function. It should be an array that defines a path 
-# into the nested json document. The path should point to 
-# a dictionary. The data returned by the worker function will
-# be merged with any existing data in the dictionary.
-
-get_handler_data_path = (doc_type) ->
-  return ['zeus']
-
-# this is the same function we defined in our design doc
-get_doc_type = (doc) -> return doc.type
-
 ...
 ```
 
 A couple things:
   * Worker handlers MUST return a promise.
-  * Any data returned in the promise will be merged into the
-    document at the path specified by `get_handler_data_path(doc_type)`.
+  * Any `data` returned in the promise will be merged into the
+    document at the specified `path`. 
+    Thus both `data` and the object at `path` must be hashes.
   * If your worker handler errors out, then the event will be marked
     as having errored.
-    While not implemented yet, pantheon-helpers will eventually log the exact error and retry at a later time
+    While not implemented yet,
+    pantheon-helpers will eventually log the exact error and retry at a later time
 
 
 ### 7. Create the API

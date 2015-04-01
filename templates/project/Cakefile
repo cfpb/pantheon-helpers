@@ -110,6 +110,9 @@ task 'start_design_doc', 'create a new kanso design doc directory', (options) ->
       )
       Promise.all(cleanup);
     ).then(() ->
+      console.log('\nRunning Kanso install...')
+      pExec("kanso install", {cwd: DD_LIB_DIR})
+    ).then(() ->
       console.log('\nBuilding coffeescript...')
       pExec("cake build", {cwd: DIR})
     ).then(() ->

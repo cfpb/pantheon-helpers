@@ -120,6 +120,12 @@ Add your CouchDB credentials to $SISYPHUS/src/config.coffee and $SISYPHUS/src/co
 You should see that the `cake watch` recompiles both config files as soon as you save them. 
 If you don't use `cake watch` you will need to run `cake build` every time you make a change.
 
+Now, we need to create the database in CouchDB.
+Go to `localhost:5984/_utils`, click "Create Database",
+and create a database called `boulders`.
+Replace `localhost:5984` with the host/port for your CouchDB instance.
+You may need to have an admin create the database for you.
+
 
 #### Design documents
 We use [Kanso](http://kan.so/) to load Design Docs into CouchDB. 
@@ -161,9 +167,10 @@ $SISYPHUS/src/design_docs/boulders.coffee with the following contents:
     module.exports = ['boulder']
 
 This tells Pantheon to add the `boulder` design doc to every
-single database in CouchDB that starts with the string `boulders`.
-If we wanted all databases that start with `boulders` to also
-have another design doc installed, we would add the name of the desired design doc to the experted array.
+single database that is (1) called `boulders` 
+or (2) starts with `boulders_`.
+If we wanted all those databases to also have another design doc installed, 
+we would add the name of the desired design doc to the exported array.
 
 ### 3. Design the Sisyphus microservice
 Rolling the boulder up the hill takes a long time (in web time): 2 minutes. 
@@ -206,6 +213,12 @@ Obviously, we can never destroy a boulder since this is an eternal task.
 Note that not all of these actions are actually correspond to an endpoint. 
 For example, 
 a `br` will only ever be called by a worker handling a `bd` event.
+
+Now that we have created our design doc, we need to sync it with CouchDB. Just run
+
+    Cake sync_design_docs
+
+This will update all the design documents in all your CouchDB databases.
 
 ### 4. Testing
 Testing is easy because the system is loosely coupled,

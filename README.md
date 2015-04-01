@@ -406,7 +406,7 @@ handlers: {
           'delighted', 'satisfied', 'mirthful', 'vengeful'
         ])
         # return that Zeus's response so we can store in in doc.
-        Promise.resolve({is: zeus_response})
+        Promise.resolve({data: {is: zeus_response} path: ['zeus']})
       )
     'bd': (event, doc) ->
       # wait 20 second, then fire off a 'br' event
@@ -418,42 +418,27 @@ handlers: {
         # return Zeus's reaction so we can store in in doc.
         # note that we _must_ return a promise, not a raw value.
         # the value returned by a handler must be a dictionary
-        Promise.resolve({is: zeus_reaction})
+        # the object pointed to by path into the doc must also be a dict.
+        # the object pointed to by path will be updated with the data dict's contents.
+        Promise.resolve({data: {is: zeus_reaction}, path: ['zeus']})
       )
     # we don't need to do anything when a boulder is created or comes to rest
     'b+': null
     'br': null
 }
 
-# worker functions can return data to store in the document.
-# you might use this to store an external resource id,
-# or any other metadata you need to be able to interact 
-# with the external world.
-
-# We are storing Zeus's reaction to Sisyphus's suffering.
-# Since every document is different, we have to tell the
-# worker where we want to put the data returned by the worker
-# function. It should be an array that defines a path 
-# into the nested json document. The path should point to 
-# a dictionary. The data returned by the worker function will
-# be merged with any existing data in the dictionary.
-
-get_handler_data_path = (doc_type) ->
-  return ['zeus']
-
-# this is the same function we defined in our design doc
-get_doc_type = (doc) -> return doc.type
-
 ...
 ```
 
 A couple things:
   * Worker handlers MUST return a promise.
-  * Any data returned in the promise will be merged into the
-    document at the path specified by `get_handler_data_path(doc_type)`.
+  * Any `data` returned in the promise will be merged into the
+    document at the specified `path`. 
+    Thus both `data` and the object at `path` must be hashes.
   * If your worker handler errors out, then the event will be marked
     as having errored.
-    While not implemented yet, pantheon-helpers will eventually log the exact error and retry at a later time
+    While not implemented yet,
+    pantheon-helpers will eventually log the exact error and retry at a later time
 
 
 ### 7. Create the API

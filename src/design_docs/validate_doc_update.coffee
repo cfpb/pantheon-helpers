@@ -23,10 +23,12 @@ v =
   get_new_audit_entries: (new_doc, old_doc) ->
     new_log = new_doc.audit or []
     old_log = if old_doc then old_doc.audit else []
+    new_entries = new_log.slice(old_log.length)
+    if not new_entries.length
+      return new_entries
     old_entries = new_log.slice(0, old_log.length)
     if not _.isEqual(old_log, old_entries)
       throw({ forbidden: 'Entries are immutable. original entries: ' + JSON.stringify(old_log) + '; modified entries: ' + JSON.stringify(old_entries) + '.' })
-    new_entries = new_log.slice(old_log.length)
     return new_entries
 
   validate_audit_entries: (actions, new_audit_entries, actor, old_doc, new_doc) ->

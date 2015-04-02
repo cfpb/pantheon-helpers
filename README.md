@@ -45,7 +45,7 @@ In your microservice application's home directory, run:
 
 ## Lifecycle of an action
 
-1. Perform an action:
+1) Perform an action:
 
 ```coffeescript
 doAction = require('pantheon-helpers/lib/doAction')
@@ -61,25 +61,25 @@ The result of doAction will be
 (2) a callback called with the resulting doc (or error), if a callback function is specified, or
 (3) a promise, if callback is the string `"promise"`. 
 
-2. The action is sent to CouchDB where the `do_action` [update handler](https://wiki.apache.org/couchdb/Document_Update_Handlers) takes over.
+2) The action is sent to CouchDB where the `do_action` [update handler](https://wiki.apache.org/couchdb/Document_Update_Handlers) takes over.
 
-3. The `do_action update handler` passes the event to its `action handler`. Action handlers must be defined in the design doc. Actions are defined for each document type; you can also define actions that can create new documents. 
+3) The `do_action update handler` passes the event to its `action handler`. Action handlers must be defined in the design doc. Actions are defined for each document type; you can also define actions that can create new documents. 
 
-4. The action handler receives the existing document (or a skeleton document if it needs to create a new doc),
+4) The action handler receives the existing document (or a skeleton document if it needs to create a new doc),
 the action hash passed into doAction,
 and the user who performed the action 
 (based on the user bound to the dbClient passed to `doAction`.
 The action handler DOES NOT RETURN ANYTHING.
 It must modify the passed document (and action hash if desired) in place.
 
-5. If the action handler modified the document,
+5) If the action handler modified the document,
 then the do_action update handler adds the action to the audit entry. If the document was not modified, then the unmodified document is return as the response for `doAction`.
 
-6. If the action modified the document,
+6) If the action modified the document,
 then Couch next calls the validation function defined for the action.
 Just like action handlers, they are defined for each document type.
 
-7. The validation function is passed a the action hash,
+7) The validation function is passed a the action hash,
 the user that performed the action,
 the document as it was before the action handler modified it,
 and the document as modified by the action handler.
@@ -88,22 +88,22 @@ If the action as performed by the user was not valid or was unauthorized,
 the validation function should throw an error hash. 
 For an unauthorized action: `{state: 'unauthorized', err: 'descriptive error message'}`, for an invalid action: `{state: 'invalid', err: 'descriptive error message'}`
 
-8a. If the validation function fails,
+8a) If the validation function fails,
 the document will not be modified,
 and `doAction` will return an unauthorized or invalid error.
 
-8b. If the validation function succeeds,
+8b) If the validation function succeeds,
 the modified document will be saved,
 and `doAction` will return the updated document.
 
-9. The worker process is constantly watching the database for changes.
+9) The worker process is constantly watching the database for changes.
 When the document is saved,
 the worker process will wake up,
 determine which actions in the audit log have not been handled by the worker yet,
 and call the appropriate worker handler for each action.
 Just like action handlers, and validation functions, worker handlers are defined for each document type.
 
-10. The worker handler is passed the action and the document.
+10) The worker handler is passed the action and the document.
 The worker should do anything that has side effects/takes a long time, such as spinning up a service, calling another api endpoint, etc.
 Whatever is done MUST BE IDEMPOTENT. 
 There is no guarantee that the action will only be run through a worker once.
@@ -111,7 +111,7 @@ The worker must return a Promise.
 If the worker fails, or partially fails, at whatever it is trying to do, it should return a rejected promise.
 If it succeeds completely, it should return a resolved promise.
 
-11. If the worker handler failed,
+11) If the worker handler failed,
 then the returned error will be logged,
 and the action will me marked as failed so it can be retried at a later time. If the worker succeeded, then the action will be marked as succeeding, so it is not tried again.
 Regardless of whether the worker handler succeeded or failed,

@@ -84,6 +84,11 @@ describe 'do_action', () ->
     expect(entry.u).toEqual('1234e3df')
     expect(typeof entry.dt).toEqual('number')
 
+  it 'calls prep_doc with the document and the actor, if the prep_doc exists', () ->
+    spyOn(this, 'prep_doc').andReturn({})
+    actual = do_action(this.actions, this.get_doc_type, this.prep_doc)(this.doc, this.req)
+    expect(this.prep_doc).toHaveBeenCalledWith(this.doc, this.req.userCtx)
+
   it 'returns the display doc after running it through prep_doc fn, and stringifying it', () ->
     actual = do_action(this.actions, this.get_doc_type, this.prep_doc)(this.doc, this.req)
     expect(JSON.parse(actual[1]).prepped).toEqual(true)

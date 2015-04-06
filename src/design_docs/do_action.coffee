@@ -37,7 +37,7 @@ module.exports = (action_handlers, get_doc_type, prep_doc) ->
       write_doc = doc
     if prep_doc
       out_doc = JSON.parse(JSON.stringify(doc))
-      out_doc = prep_doc(out_doc)
+      out_doc = prep_doc(out_doc, actor)
     else
       out_doc = doc
 

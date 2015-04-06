@@ -59,12 +59,15 @@ describe 'get_new_audit_entries', () ->
     actual = v.get_new_audit_entries(this.new_doc, null)
     expect(actual).toEqual([1,2,3,4])
 
-  it 'throws an error if an old audit entry is modified', () ->
+  it 'throws an error if an old audit entry is modified when there is a new audit entry', () ->
     this.old_doc.audit[1] = 3
     expect(() ->
-      actual = v.get_new_audit_entries(this.new_doc, null)
+      actual = v.get_new_audit_entries(this.new_doc, this.old_doc)
     ).toThrow()
 
+  it 'does not throw an error if an old audit entry is modified, but there are no new audit entries', () ->
+      actual = v.get_new_audit_entries({audit: [1,2]}, {audit: [1,2]})
+      expect(actual).toEqual([])
 
 describe 'validate_audit_entries', () ->
   beforeEach () ->

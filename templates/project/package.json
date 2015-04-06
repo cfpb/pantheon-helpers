@@ -3,7 +3,7 @@
   "description": "",
   "author": "",
   "scripts": {
-    "test": "icake test"
+    "test": "cake test"
   },
   "dependencies": {
     "basic-auth": "1.0.0",

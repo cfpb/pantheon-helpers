@@ -50,7 +50,9 @@ u.process_resp = (opts, callback) ->
 
   (err, resp, body) ->
     if err or is_http_err(resp)
-      err = {err: err, msg: body, code: resp?.statusCode}
+      req = resp?.req or {}
+      req = _.pick(req, '_headers', 'path', 'method')
+      err = {err: err, msg: body, code: resp?.statusCode, req: req}
     if opts.body_only
       return callback(err, body)
     else

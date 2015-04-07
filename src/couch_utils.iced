@@ -37,7 +37,7 @@ module.exports = (conf) ->
       if err
         return callback?(err, resp)
       db_name = db.config.db
-      design_docs = require('./design_docs/' + db_name.split('_')[0])
+      design_docs = require('../../../lib/design_docs/' + db_name.split('_')[0])
       await x.sync_design_docs(db_name, design_docs, defer(err, resp))
       if err
         return callback?(err, resp)

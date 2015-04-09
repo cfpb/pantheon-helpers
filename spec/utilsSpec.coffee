@@ -41,16 +41,16 @@ describe 'mk_objs', () ->
 
 
 describe 'process_resp', () ->
-  it 'returns a standardized error message when there is a http error code', (done) ->
+  it 'returns a standardized error message when there is an http error code', (done) ->
     callback = (err) ->
-      expect(err).toEqual({err: null, msg: 'body', code: 404})
+      expect(err).toEqual({err: null, msg: 'body', code: 404, req: { _headers : { header : 'header1' }, path : 'requested/path', method : 'GET' }})
       done()
 
-    utils.process_resp({ignore_codes: [409]}, callback)(null, {statusCode:404}, 'body')
+    utils.process_resp({ignore_codes: [409]}, callback)(null, {statusCode:404, req: {_headers: {header: 'header1'}, path: 'requested/path', method: 'GET'}}, 'body')
 
   it 'returns a standardized error message when there is a connection error', (done) ->
     callback = (err) ->
-      expect(err).toEqual({err: 'ENOENT', msg: null, code: undefined})
+      expect(err).toEqual({err: 'ENOENT', msg: null, code: undefined, req: {}})
       done()
 
     utils.process_resp(callback)('ENOENT', null, null)

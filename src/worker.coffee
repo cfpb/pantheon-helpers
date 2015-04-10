@@ -32,7 +32,8 @@ x.get_plugin_handlers = (handlers, entry, doc_type) ->
   for plugin, plugin_handlers of handlers
     handler = plugin_handlers[doc_type]?[entry.a]
     if not handler
-      if entry.k == plugin
+      entry_plugin = entry.plugin or entry.resource
+      if entry_plugin == plugin
         handler = plugin_handlers[doc_type]?.self?[entry.a]
       else
         handler = plugin_handlers[doc_type]?.other?[entry.a]

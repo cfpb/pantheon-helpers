@@ -44,7 +44,7 @@ describe 'get_plugin_handlers', () ->
 
   event = {
     a: 'u+',
-    k: 'plugin1',
+    plugin: 'plugin1',
   }
   it 'returns a matching handler for each plugin', () ->
     event = {a: 'u+'}
@@ -52,7 +52,7 @@ describe 'get_plugin_handlers', () ->
     expect(actual).toEqual({plugin1: '1u+', plugin2: '2u+'})
 
   it 'returns the self handler for the event plugin and an other handler for all other plugins', () ->
-    event = {a: 'a+', k: 'plugin1'}
+    event = {a: 'a+', plugin: 'plugin1'}
     actual = worker.get_plugin_handlers(handlers, event, 'team')
     expect(actual).toEqual({plugin1: '1sa+', plugin2: '2oa+'})
 

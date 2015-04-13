@@ -102,6 +102,8 @@ x.on_change = (db, handlers, get_doc_type, get_handlers) ->
       # results is a hash of type:
       # {entry_id: {resource: {state: "resolved|rejected", value|error: "result"}}}
       x.update_audit_entries(db, doc._id, results)
+      if _.find(results, (result) -> _.findWhere(result, {state: 'rejected'}))
+        console.log('ERR', change.doc, unsynced_audit_entries, results)
     ).catch((err) ->
       console.log('ERR', err)
     )

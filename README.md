@@ -234,7 +234,14 @@ If you look in `$SISYPHUS/lib/design_docs/boulder`,
 you will see some files that are not in source. First, is the `kanso.json` file, this is similar to node.js `package.json` or a bower `bower.json` file.
 It tells kanso what to package up and send to couchdb.
 
-Next, in the `lib` subdirectory you will see a copy of underscore, and a symlink to the `pantheon-helpers/lib/design_docs` folder. Any files that you want to reference in your design doc must be in the `boulder` directory, otherwise Kanso can't package them up.
+Next is the `_security` file.
+This is a json file that couchdb uses to manage permissions.
+See http://docs.couchdb.org/en/latest/intro/security.html and
+http://docs.couchdb.org/en/latest/api/database/security.html.
+You should note that only the security document from the
+first design doc defined for each database will be loaded.
+
+Finally, in the `lib` subdirectory you will see a copy of underscore, and a symlink to the `pantheon-helpers/lib/design_docs` folder. Any files that you want to reference in your design doc must be in the `boulder` directory, otherwise Kanso can't package them up.
 So we add them here.
 
 Now that we have created our design document,

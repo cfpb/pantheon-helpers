@@ -40,11 +40,13 @@ h.remove_in_place_by_id = (container, record) ->
   given a record hash with an id key, look through the container array
   to find an item with the same id as record. If such an item exists,
   remove it in place.
+  return the deleted record or undefined
   ###
   for item, i in container
     if item.id == record.id
-      container.splice(i, 1)
-      return
+      existing_record = container.splice(i, 1)[0]
+      return existing_record
+  return undefined
 
 h.insert_in_place = (container, value) ->
   if value not in container
@@ -54,8 +56,13 @@ h.insert_in_place_by_id = (container, record) ->
   ###
   given a record hash with an id key, add the record to the container
   if an item with the record's key is not already in the container
+  return the existing or new record.
   ###
-  if not _.findWhere(container, {id: record.id})
+  existing_record = _.findWhere(container, {id: record.id})
+  if existing_record
+    return existing_record
+  else
     container.push(record)
+    return record
 
 module.exports = h

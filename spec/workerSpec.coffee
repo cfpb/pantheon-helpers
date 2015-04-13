@@ -274,8 +274,8 @@ describe 'start_worker', () ->
     expect(follow.Feed).toHaveBeenCalledWith({db: 'url/db', include_docs: true})
 
   it 'attaches worker.on_change to the "change" event', () ->
-    worker.start_worker(this.db, 'handlers', 'get_doc_type')
-    expect(worker.on_change).toHaveBeenCalledWith(this.db, 'handlers', 'get_doc_type')
+    worker.start_worker(this.db, 'handlers', 'get_doc_type', 'get_plugin_handlers')
+    expect(worker.on_change).toHaveBeenCalledWith(this.db, 'handlers', 'get_doc_type', 'get_plugin_handlers')
     expect(this.feedOn).toHaveBeenCalledWith('change', 'on_change')
 
   it 'starts following the feed', () ->

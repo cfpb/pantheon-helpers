@@ -83,7 +83,7 @@ x.update_audit_entries = (db, doc_id, results) ->
   )
 
 
-x.on_change = (db, handlers, get_doc_type, get_handlers=x.get_handlers) ->
+x.on_change = (db, handlers, get_doc_type, get_handlers) ->
   return (change) ->
     doc = change.doc
     doc_type = get_doc_type(doc)
@@ -107,7 +107,7 @@ x.on_change = (db, handlers, get_doc_type, get_handlers=x.get_handlers) ->
     )
 
 
-x.start_worker = (db, handlers, get_doc_type) ->
+x.start_worker = (db, handlers, get_doc_type, get_handlers=x.get_handlers) ->
   ###
   start a worker that watches a db for changes and calls the appropriate handlers.
   db: the nano database to watch
@@ -127,7 +127,7 @@ x.start_worker = (db, handlers, get_doc_type) ->
     else
       return true
 
-  feed.on 'change', x.on_change(db, handlers, get_doc_type)
+  feed.on 'change', x.on_change(db, handlers, get_doc_type, get_handlers)
 
   feed.on 'error', (err) ->
     console.log(err)

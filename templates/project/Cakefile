@@ -40,7 +40,7 @@ task 'runworker', 'Run the couchdb worker', (options) ->
 
 option '-t', '--db_type [type]', 'db type to update'
 
-task 'sync_design_docs', 'sync all design docs with couchdb', (options) ->
+task 'sync_design_docs', 'sync all design docs with couchdb (options: -t [type])', (options) ->
   if options.db_type
     db_types = [options.db_type]
   else
@@ -55,7 +55,9 @@ task 'sync_design_docs', 'sync all design docs with couchdb', (options) ->
     console.log('Syncing couchdb ' + db_type + ' design docs ')
     require('./lib/couch_utils').sync_all_db_design_docs(db_type)
 
-task 'test', 'run all tests', (options) ->
+option '-v', '--verbose', 'verbose testing output'
+
+task 'test', 'run all tests (options: -v)', (options) ->
   if options.verbose
     cp = exec "jasmine-node --coffee --verbose ./spec"
   else

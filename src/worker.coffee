@@ -32,7 +32,8 @@ x.get_plugin_handlers = (handlers, entry, doc_type) ->
   for plugin, plugin_handlers of handlers
     handler = plugin_handlers[doc_type]?[entry.a]
     if not handler
-      if entry.k == plugin
+      entry_plugin = entry.plugin or entry.resource
+      if entry_plugin == plugin
         handler = plugin_handlers[doc_type]?.self?[entry.a]
       else
         handler = plugin_handlers[doc_type]?.other?[entry.a]
@@ -82,7 +83,7 @@ x.update_audit_entries = (db, doc_id, results) ->
   )
 
 
-x.on_change = (db, handlers, get_doc_type, get_handlers=x.get_handlers) ->
+x.on_change = (db, handlers, get_doc_type, get_handlers) ->
   return (change) ->
     doc = change.doc
     doc_type = get_doc_type(doc)
@@ -101,12 +102,14 @@ x.on_change = (db, handlers, get_doc_type, get_handlers=x.get_handlers) ->
       # results is a hash of type:
       # {entry_id: {resource: {state: "resolved|rejected", value|error: "result"}}}
       x.update_audit_entries(db, doc._id, results)
+      if _.find(results, (result) -> _.findWhere(result, {state: 'rejected'}))
+        console.log('ERR', change.doc, unsynced_audit_entries, results)
     ).catch((err) ->
       console.log('ERR', err)
     )
 
 
-x.start_worker = (db, handlers, get_doc_type) ->
+x.start_worker = (db, handlers, get_doc_type, get_handlers=x.get_handlers) ->
   ###
   start a worker that watches a db for changes and calls the appropriate handlers.
   db: the nano database to watch
@@ -126,7 +129,7 @@ x.start_worker = (db, handlers, get_doc_type) ->
     else
       return true
 
-  feed.on 'change', x.on_change(db, handlers, get_doc_type)
+  feed.on 'change', x.on_change(db, handlers, get_doc_type, get_handlers)
 
   feed.on 'error', (err) ->
     console.log(err)

@@ -20,6 +20,17 @@ module.exports = (conf) ->
 
   x.nano_system_user = nano_system_user = x.nano_user(conf.COUCHDB.SYSTEM_USER)
 
+  x.create_db = (db_name, security_doc, callback) ->
+    # create the database
+    await nano_system_user.db.create(db_name, defer(err, resp))
+    if err
+      return callback?(err, resp)
+    design_docs = require('../../../lib/design_docs/' + db_name.split('_')[0])
+    await x.sync_design_docs(db_name, design_docs, security_doc, defer(err, resp))
+    if err
+      return callback?(err, resp)
+    return callback()
+
   x.ensure_db = (db, method, args...) ->
     ###
     call the method against the db with the given args.
@@ -33,12 +44,8 @@ module.exports = (conf) ->
       db[method].apply(db, args.concat([defer(err, resp)]))
 
     if err?.message == 'no_db_file'
-      await nano_system_user.db.create(db.config.db, defer(err, resp))
-      if err
-        return callback?(err, resp)
       db_name = db.config.db
-      design_docs = require('./design_docs/' + db_name.split('_')[0])
-      await x.sync_design_docs(db_name, design_docs, defer(err, resp))
+      await create_db(db_name, defer(err))
       if err
         return callback?(err, resp)
       return db[method].apply(db, args.concat([callback]))
@@ -84,7 +91,31 @@ module.exports = (conf) ->
     else
       console.log('completed without errors')
 
-  x.sync_design_docs = (db_name, design_doc_names, callback) ->
+  x.sync_security_doc = (db_name, security_doc, callback) ->
+    ### 
+    security doc can either be a security doc hash or a design doc name string.
+    if a string, the security doc will be looked up in the design doc folder.
+    ###
+    if _.isString(security_doc)
+      security_doc_path = path.join(__dirname, '../../../lib/design_docs', security_doc, '_security')
+      await fs.readFile(security_doc_path, {encoding: 'utf8'}, defer(err, security_data))
+      security_doc = JSON.parse(security_data)
+      if err?.code == 'ENOENT'
+        return callback()
+      if err
+        return callback(err)
+    db = x.nano_system_user.use(db_name)
+    return x.update(db, security_doc, '_security', callback)
+
+  x.sync_design_docs = (db_name, design_doc_names, security_doc, callback) ->
+    if _.isFunction(security_doc)
+      callback = security_doc
+      security_doc = null
+    security_doc = security_doc or design_doc_names[0]
+    await x.sync_security_doc(db_name, security_doc, defer(err))
+    if err
+      return callback(err)
+
     errors = []
     await
       for name, i in design_doc_names

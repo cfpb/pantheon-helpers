@@ -50,6 +50,25 @@ describe 'remove_in_place', () ->
     h.remove_in_place(actual, 'b')
     expect(actual).toEqual(['a', 'c'])
 
+describe 'remove_in_place_by_id', () ->
+  it 'removes the record with the matching id, if already there', () ->
+    actual = [{id: 1}, {id: 2, val: 'a'}, {id:3}]
+    h.remove_in_place_by_id(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id:3}])
+
+  it 'returns the removed record', () ->
+    actual = h.remove_in_place_by_id([{id: 1}, {id: 2, val: 'a'}, {id:3}], {id: 2})
+    expect(actual).toEqual({id: 2, val: 'a'})
+
+  it 'does nothing if a record with a matching id is not in the container', () ->
+    actual = [{id: 1}, {id:3}]
+    h.remove_in_place_by_id(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id:3}])
+
+  it 'returns undefined if nothing deleted', () ->
+    actual = h.remove_in_place_by_id([{id: 1}, {id:3}], {id: 2})
+    expect(actual).toBeUndefined()
+
 describe 'insert_in_place', () ->
   it 'adds the value to the container array, if not already there', () ->
     actual = ['a', 'b']
@@ -60,3 +79,22 @@ describe 'insert_in_place', () ->
     actual = ['a', 'b', 'c']
     h.insert_in_place(actual, 'c')
     expect(actual).toEqual(['a', 'b', 'c'])
+
+describe 'insert_in_place_by_id', () ->
+  it 'adds the record if there is not already a record with a matching id', () ->
+    actual = [{id: 1}, {id:3}]
+    h.insert_in_place_by_id(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id:3}, {id: 2}])
+
+  it 'returns the inserted record', () ->
+    actual = h.insert_in_place_by_id([{id: 1}, {id:3}], {id: 2})
+    expect(actual).toEqual({id: 2})
+
+  it 'does nothing if a record with the same id is already there', () ->
+    actual = [{id: 1}, {id: 2, val: 'a'}, {id:3}]
+    h.insert_in_place_by_id(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id: 2, val: 'a'}, {id:3}])
+
+  it 'returns the existing record', () ->
+    actual = h.insert_in_place_by_id([{id: 1}, {id: 2, val: 'a'}, {id:3}], {id: 2})
+    expect(actual).toEqual({id: 2, val: 'a'})

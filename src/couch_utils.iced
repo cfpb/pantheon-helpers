@@ -99,11 +99,11 @@ module.exports = (conf) ->
     if _.isString(security_doc)
       security_doc_path = path.join(__dirname, '../../../lib/design_docs', security_doc, '_security')
       await fs.readFile(security_doc_path, {encoding: 'utf8'}, defer(err, security_data))
-      security_doc = JSON.parse(security_data)
       if err?.code == 'ENOENT'
         return callback()
       if err
         return callback(err)
+      security_doc = JSON.parse(security_data)
     db = x.nano_system_user.use(db_name)
     return x.update(db, security_doc, '_security', callback)
 

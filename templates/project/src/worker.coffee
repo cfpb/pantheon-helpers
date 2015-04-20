@@ -1,4 +1,4 @@
-worker = require('pantheon-helpers/lib/worker')
+worker = require('pantheon-helpers').worker
 _ = require('underscore')
 follow = require('follow')
 couch_utils = require('./couch_utils')

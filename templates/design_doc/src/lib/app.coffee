@@ -1,6 +1,6 @@
 _ = require('./underscore')
 actions = require('./actions')
-audit = require('./shared/audit')
+audit = require('pantheon-helpers').design_docs.audit
 
 dd =
   views: {}

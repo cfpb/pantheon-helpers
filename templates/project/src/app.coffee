@@ -1,4 +1,4 @@
-pantheonMiddleware = require('pantheon-helpers/lib/middleware')
+pantheonMiddleware = require('pantheon-helpers').middleware
 conf = require('./config')
 couch_utils = require('./couch_utils')
 

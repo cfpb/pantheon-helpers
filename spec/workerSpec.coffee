@@ -1,6 +1,10 @@
 follow = require('follow')
-worker = require('../lib/worker')
+worker = require('pantheon-helpers').worker
 Promise = require('promise')
+
+_handleError = (done) ->
+  (err) ->
+    done(err)
 
 describe 'get_handlers', () ->
   handlers = 
@@ -168,13 +172,13 @@ describe 'update_audit_entries', () ->
     worker.update_audit_entries(this.db, 'doc_id', this.handler_results).then(() =>
       expect(this.db.get).toHaveBeenCalledWith('doc_id', jasmine.any(Function))
       return done()
-    )
+    ).catch(_handleError(done))
 
   it 'calls update_audit_entry with the doc', (done) ->
     worker.update_audit_entries(this.db, 'doc_id', this.handler_results).then(() =>
       expect(worker.update_audit_entry).toHaveBeenCalledWith(this.doc)
       return done()
-    ).catch((err) -> console.log('err', err))
+    ).catch(_handleError(done))
 
   it 'calls the fn returned by update_audit_entry once for each entry with the entry_results and the entry_id', (done) ->
     worker.update_audit_entries(this.db, 'doc_id', this.handler_results).then(() =>
@@ -182,20 +186,20 @@ describe 'update_audit_entries', () ->
       expect(this.update_audit_entry_response.calls[0].args[1]).toEqual('1')
       expect(this.update_audit_entry_response.calls[1].args[1]).toEqual('2')
       return done()
-    ).catch((err) -> console.log('err', err))
+    ).catch(_handleError(done))
 
   it 'saves the document if changes have been made', (done) ->
     this.update_audit_entry_response.andCallFake(() => this.doc.audit[1].synced = true)
     worker.update_audit_entries(this.db, 'doc_id', this.handler_results).then(() =>
       expect(this.db.insert).toHaveBeenCalledWith(this.doc, jasmine.any(Function))
       return done()
-    ).catch((err) -> console.log('err', err))
+    ).catch(_handleError(done))
 
   it 'does not save the document if changes have not been made', (done) ->
     worker.update_audit_entries(this.db, 'doc_id', this.handler_results).then(() =>
       expect(this.db.insert).not.toHaveBeenCalled()
       return done()
-    ).catch((err) -> console.log('err', err))
+    ).catch(_handleError(done))
 
 describe 'on_change', () ->
   beforeEach () ->
@@ -226,13 +230,13 @@ describe 'on_change', () ->
     this.on_change(this.change).then(() =>
       expect(worker.get_unsynced_audit_entries).toHaveBeenCalledWith(this.change.doc)
       done()
-    )
+    ).catch(_handleError(done))
 
   it 'gets the handlers for each unsynced entry by calling get_handlers with the resources, entry, and doc_type', (done) ->
     this.on_change(this.change).then(() =>
       expect(worker.get_handlers).toHaveBeenCalledWith('handlers', {'id': 'entry2'}, 'doc_type')
       done()
-    )
+    ).catch(_handleError(done))
 
   it 'calls each handler for each entry', (done) ->
     this.on_change(this.change).then(() =>
@@ -247,19 +251,19 @@ describe 'on_change', () ->
       expect(this.kratos_handler.calls[0].args[1]).toEqual(this.change.doc)
 
       done()
-    )
+    ).catch(_handleError(done))
 
   it 'formats all the responses from the handlers into a tree of hashes', (done) ->
     this.on_change(this.change).then(() =>
       expect(worker.update_audit_entries.calls[0].args[2]).toEqual(this.expected_results)
       done()
-    )
+    ).catch(_handleError(done))
 
   it 'calls update_audit_entries with the db, doc_id, and results', (done) ->
     this.on_change(this.change).then(() =>
       expect(worker.update_audit_entries).toHaveBeenCalledWith('db', this.change.doc._id, this.expected_results)
       done()
-    )
+    ).catch(_handleError(done))
 
 describe 'start_worker', () ->
   beforeEach () ->

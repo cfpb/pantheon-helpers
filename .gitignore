@@ -34,6 +34,6 @@ coverage.xml
 
 # Front-End #
 #############
-node_modules/
+/node_modules/
 bower_components/
 .grunt/

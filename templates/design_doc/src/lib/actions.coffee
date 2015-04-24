@@ -1,4 +1,4 @@
-do_action = require('./pantheon-helpers').design_docs.do_action
+do_action = require('pantheon-helpers').design_docs.do_action
 validate_doc_update = require('pantheon-helpers').design_docs.validate_doc_update.validate_doc_update
 
 get_doc_type = (doc) -> throw new Error('Not Implemented: get_doc_type')

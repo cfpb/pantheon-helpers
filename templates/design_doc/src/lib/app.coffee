@@ -1,4 +1,4 @@
-_ = require('./underscore')
+_ = require('underscore')
 actions = require('./actions')
 audit = require('pantheon-helpers').design_docs.audit
 

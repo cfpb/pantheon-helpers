@@ -37,18 +37,18 @@ describe 'do_action', () ->
     this.req.body = JSON.stringify(this.action)
 
     actual = this.do_action(this.doc, this.req)
-    expect(actual).toEqual([null, '{"status":"error","msg":"invalid action \\\"x\\\" for doc type \\\"team\\\"."}'])    
+    expect(actual).toEqual([null, {code : 403, body: '{"status":"error","msg":"invalid action \\\"x\\\" for doc type \\\"team\\\"."}'}])
 
   it 'errors if it does not know how to handle the document type', () ->
     actual = do_action(this.actions, (doc) -> return 'user')(this.doc, this.req)
-    expect(actual).toEqual([null, '{"status":"error","msg":"invalid action \\\"success\\\" for doc type \\\"user\\\"."}'])
+    expect(actual).toEqual([null, {code : 403, body: '{"status":"error","msg":"invalid action \\\"success\\\" for doc type \\\"user\\\"."}'}])
 
   it "errors if the action handler throws an error, returning the handler's error", () ->
     this.action.a = 'error'
     this.req.body = JSON.stringify(this.action)
 
     actual = this.do_action(this.doc, this.req)
-    expect(actual).toEqual([null, JSON.stringify({"status": "error", "msg": "error handler error"})])
+    expect(actual).toEqual([null, {code : 500, body: JSON.stringify({"status": "error", "msg": "error handler error"})}])
 
   it 'gets the handler for the action and calls handler with doc, action and actor', () ->
     spyOn(this.actions.team, 'success')

@@ -16,7 +16,8 @@ module.exports = (action_handlers, get_doc_type, prep_doc) ->
     action_handler = action_handlers[doc_type]?[action_name]
 
     if not action_handler
-      return [null, JSON.stringify({"status": "error", "msg": 'invalid action "' + action_name + '" for doc type "' + doc_type + '".'})]
+      error_msg = 'invalid action "' + action_name + '" for doc type "' + doc_type + '".'
+      return [null, {code: 403, body: JSON.stringify({"status": "error", "msg": error_msg})}]
 
     doc or= {_id: req.uuid, audit: []}
     old_doc = JSON.parse(JSON.stringify(doc)) # clone original to check if change
@@ -24,7 +25,7 @@ module.exports = (action_handlers, get_doc_type, prep_doc) ->
     try
       action_handler(doc, action, actor)
     catch e
-      return [null, JSON.stringify({"status": "error", "msg": e})]
+      return [null, {code: 500, body: JSON.stringify({"status": "error", "msg": e})}]
 
     if _.isEqual(old_doc, doc)
       write_doc = null

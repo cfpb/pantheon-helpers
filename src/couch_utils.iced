@@ -45,7 +45,7 @@ module.exports = (conf) ->
 
     if err?.message == 'no_db_file'
       db_name = db.config.db
-      await create_db(db_name, defer(err))
+      await x.create_db(db_name, defer(err))
       if err
         return callback?(err, resp)
       return db[method].apply(db, args.concat([callback]))

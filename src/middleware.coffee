@@ -7,8 +7,8 @@ module.exports =
     SYSTEM_USER = conf.COUCHDB.SYSTEM_USER
     (req, resp, next) ->
       # look for admin credentials in basic auth, and if valid, login user as admin.
-      credentials = basic_auth(req);
-      if conf.DEV == 'true' or 
+      credentials = basic_auth(req)
+      if conf.DEV or
          (
           credentials and
           credentials.name == SYSTEM_USER and

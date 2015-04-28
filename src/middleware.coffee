@@ -8,11 +8,11 @@ module.exports =
     (req, resp, next) ->
       # look for admin credentials in basic auth, and if valid, login user as admin.
       credentials = basic_auth(req);
-      if conf.DEV = 'true' or 
+      if conf.DEV == 'true' or 
          (
           credentials and
           credentials.name == SYSTEM_USER and
-          credentials.pass = conf.COUCH_PWD
+          credentials.pass == conf.COUCH_PWD
          )
         req.session or= {}
         req.session.user = SYSTEM_USER

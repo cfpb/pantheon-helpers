@@ -1,5 +1,7 @@
 # Pantheon Helpers
 
+[![Build Status](https://travis-ci.org/cfpb/pantheon-helpers.svg?branch=master)](https://travis-ci.org/cfpb/pantheon-helpers)
+
 ## Description
 The CFPB Pantheon of microservices help medium-sized development teams get their work done.
 Pantheon Helpers is a small Node.js library to make it easier to build a microservice in Node.js with CouchDB.

@@ -1,7 +1,17 @@
 _ = require('underscore')
 
-a =
+
+dd =
   views:
+    failures_by_retry_date:
+      map: (doc) ->
+        now = +new Date()
+        nextAttemptTime = 1e+100
+        for entry in (doc.audit or [])
+          if entry.attempts?[0] < nextAttemptTime
+            nextAttemptTime = entry.attempts?[0]
+        if nextAttemptTime < 1e+100
+            emit(nextAttemptTime)
     audit_by_timestamp:
       map: (doc) ->
         for entry in doc.audit
@@ -25,11 +35,12 @@ a =
     }
   ]
 
+  shows: {}
 
-  mixin: (dd) ->
-    _.extend(dd.views, a.views)
-    _.extend(dd.lists, a.lists)
-    dd.rewrites = dd.rewrites.concat(a.rewrites)
-    return dd
+  updates: {}
 
-module.exports = a
+if typeof(emit) == 'undefined'
+  dd.emitted = []
+  emit = (k, v) -> dd.emitted.push([k, v])
+
+module.exports = dd

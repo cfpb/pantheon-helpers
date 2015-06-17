@@ -1,5 +1,5 @@
 follow = require('follow')
-worker = require('pantheon-helpers').worker
+worker = require('../lib').worker
 Promise = require('promise')
 
 

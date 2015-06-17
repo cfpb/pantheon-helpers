@@ -20,7 +20,7 @@ task 'watch', 'Watch src directory and build the .js files', (options) ->
   cp.stderr.pipe(process.stderr)
 
 task 'test', 'run all tests', (options) ->
-  Promise.exec("coffee --bare --compile --output ./spec/ ./spec/").then(() ->
+  Promise.exec("./node_modules/iced-coffee-script/bin/coffee --bare --compile --output ./spec/ ./spec/").then(() ->
     cmd = "./node_modules/istanbul/lib/cli.js cover ./node_modules/jasmine-node/bin/jasmine-node ./spec"
     cmd += if options.verbose then "--verbose " else ""
     cmd += " ./spec/"

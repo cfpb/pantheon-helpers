@@ -4,7 +4,7 @@ fs = require('fs')
 path = require('path')
 _ = require('underscore')
 {exec} = require 'child_process'
-
+Promise = require('./promise')
 
 module.exports = (conf) ->
   x = {}
@@ -15,6 +15,7 @@ module.exports = (conf) ->
     out += user + ':' + conf.COUCH_PWD + '@'
     out += conf.COUCHDB.HOST + ':' + conf.COUCHDB.PORT
 
+  x.conf = conf
   x.nano_user = (user) ->
     return require('nano-promise')({url: get_couchdb_url(user)})
 
@@ -169,11 +170,11 @@ module.exports = (conf) ->
     else
       return callback(null, bulk_resp)
 
-  x.get_uuid = (callback) ->
-    await nano_system_user.request({db: "_uuids"}, defer(err, resp))
-    if err
-      return callback(err, resp)
-    return callback(null, resp.uuids[0])
+  x.getUuid = () ->
+    ### returns a promise ###
+    return nano_system_user.request({db: "_uuids"}, 'promise').then((resp) ->
+      Promise.resolve(resp.uuids[0])
+    )
 
   x.get_uuids = (count, callback) ->
     # params is not working for some reason so hacked around it with path

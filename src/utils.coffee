@@ -1,4 +1,5 @@
 _ = require('underscore')
+{exec} = require 'child_process'
 
 u =
   mk_objs: (obj, path_array, val={}) ->
@@ -71,5 +72,23 @@ u.deepExtend = (target, source) ->
     else
       target[k] = sv
   return target
+
+u.proxyExec = (cmd, process, callback) ->
+  ###
+  proxy stdout/stderr to process;
+  call optional callback when done
+  return child process
+  ###
+  cp = exec(cmd)
+  cp = exec(cmd)
+  cp.stdout.pipe(process.stdout)
+  cp.stderr.pipe(process.stderr)
+  cp.on('exit', (code) ->
+    if code
+      return process.exit(code)
+    else if _.isFunction(callback)
+      return callback(code)
+  )
+  return cp
 
 module.exports = u

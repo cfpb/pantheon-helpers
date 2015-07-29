@@ -1,5 +1,39 @@
 _ = require('underscore')
 
+sendNakedList = (getRow, start, send, rowTransform) ->
+  ###
+  lazily send a JSON serialized list of rows,
+  each having been transformed by rowTransform.
+  If rowTransform throws the string `"skip"`,
+  the row will be skipped.
+
+  coppied from pantheon-helpers-design-docs.helpers
+  b/c npm does not preserve symlinks
+  ###
+  start({
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  first = true
+  send('[')
+  while(row = getRow())
+    try
+      transformedRow = rowTransform(row)
+    catch e
+      if e == 'skip'
+        continue
+      else
+        throw e
+
+    if first
+      first = false
+    else
+      send(',')
+
+    send(JSON.stringify(transformedRow))
+  send(']')
+
 
 dd =
   views:
@@ -21,11 +55,7 @@ dd =
 
   lists:
     get_values: (header, req) ->
-      out = []
-      while(row = getRow())
-        val = row.value
-        out.push(val)
-      return JSON.stringify(out)
+      sendNakedList(getRow, start, send, (row) -> row.value)
 
   rewrites: [
     {

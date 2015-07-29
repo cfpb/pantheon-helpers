@@ -733,6 +733,7 @@ With our route handlers created, we just need to create our routes:
 In `$SISYPHUS/routes.coffee`:
 
 ```coffeescript
+auditRoutes = require('pantheon-helpers').auditRoutes
 boulders = require('./api/boulders')
 boulder = require('./api/boulder')
 
@@ -742,7 +743,15 @@ module.exports = (app) ->
   app.get('/sisyphus/boulders/:boulderId', boulder.handleGetBoulder)
   app.put('/sisyphus/boulders/:boulderId/state/down', boulder.handleRollBoulderDown)
   app.put('/sisyphus/boulders/:boulderId/state/up', boulder.handleRollBoulderUp)
+
+  auditRoutes(app, ['boulder'], '/sysiphus')
 ```
+
+In addition to adding the sysiphus-specific routes,
+we also added the audit query endpoint.
+We had to specify all the CouchDB databases the endpoint should query for audit entries.
+We also had to specify the audit route's prefix.
+The `auditRoutes` function adds a single endpoint `<prefix>/audit`, which accepts a `start` and `end` query params with unix timestamp (`+new Date()`) - e.g.: `/sisyphus/audit/?start=1438203622727&end=1438205772727`
 
 You now have a fully functioning application with auditing, logging, and a background worker process.
 

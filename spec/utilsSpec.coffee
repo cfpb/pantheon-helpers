@@ -88,3 +88,103 @@ describe 'process_resp', () ->
       done()
 
     utils.process_resp({body_only: true}, callback)(null, {statusCode:200}, 'body')
+
+# no longer in utils, just in template shared.coffee, but can't test that
+# describe 'getDocType', () ->
+#   it 'returns `user` when the doc is a user document (id starts with `org.couchdb.user:`', () ->
+#     cut = utils.getDocType
+
+#     actual = cut({_id: 'org.couchdb.user:cuwmg483cuhew'})
+
+#     expect(actual).toEqual('user')
+
+
+#   it 'returns the type as prepended to the _id, and separated by an _', () ->
+#     cut = utils.getDocType
+
+#     actual = cut({_id: 'type_cuwmg483cuhew'})
+
+#     expect(actual).toEqual('type')
+
+#   it 'returns null if there is no valid type to be pulled from the id', () ->
+#     cut = utils.getDocType
+
+#     actual = cut({_id: '_cuwmg483cuhew'})
+
+#     expect(actual).toEqual(null)
+
+
+describe 'removeInPlace', () ->
+  it 'removes the value from the container array, if already there', () ->
+    actual = ['a', 'b', 'c']
+    utils.removeInPlace(actual, 'b')
+    expect(actual).toEqual(['a', 'c'])
+
+  it 'does nothing if the value is not in the container', () ->
+    actual = ['a', 'c']
+    utils.removeInPlace(actual, 'b')
+    expect(actual).toEqual(['a', 'c'])
+
+describe 'removeInPlaceById', () ->
+  it 'removes the record with the matching id, if already there', () ->
+    actual = [{id: 1}, {id: 2, val: 'a'}, {id:3}]
+    utils.removeInPlaceById(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id:3}])
+
+  it 'returns the removed record', () ->
+    actual = utils.removeInPlaceById([{id: 1}, {id: 2, val: 'a'}, {id:3}], {id: 2})
+    expect(actual).toEqual({id: 2, val: 'a'})
+
+  it 'does nothing if a record with a matching id is not in the container', () ->
+    actual = [{id: 1}, {id:3}]
+    utils.removeInPlaceById(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id:3}])
+
+  it 'returns undefined if nothing deleted', () ->
+    actual = utils.removeInPlaceById([{id: 1}, {id:3}], {id: 2})
+    expect(actual).toBeUndefined()
+
+describe 'insertInPlace', () ->
+  it 'adds the value to the container array, if not already there', () ->
+    actual = ['a', 'b']
+    utils.insertInPlace(actual, 'c')
+    expect(actual).toEqual(['a', 'b', 'c'])
+
+  it 'does nothing if the value is already there', () ->
+    actual = ['a', 'b', 'c']
+    utils.insertInPlace(actual, 'c')
+    expect(actual).toEqual(['a', 'b', 'c'])
+
+describe 'insertInPlaceById', () ->
+  it 'adds the record if there is not already a record with a matching id', () ->
+    actual = [{id: 1}, {id:3}]
+    utils.insertInPlaceById(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id:3}, {id: 2}])
+
+  it 'returns the inserted record', () ->
+    actual = utils.insertInPlaceById([{id: 1}, {id:3}], {id: 2})
+    expect(actual).toEqual({id: 2})
+
+  it 'does nothing if a record with the same id is already there', () ->
+    actual = [{id: 1}, {id: 2, val: 'a'}, {id:3}]
+    utils.insertInPlaceById(actual, {id: 2})
+    expect(actual).toEqual([{id: 1}, {id: 2, val: 'a'}, {id:3}])
+
+  it 'returns the existing record', () ->
+    actual = utils.insertInPlaceById([{id: 1}, {id: 2, val: 'a'}, {id:3}], {id: 2})
+    expect(actual).toEqual({id: 2, val: 'a'})
+
+describe 'formatId', () ->
+  it 'returns the id with the typeName prepended if not already so', () ->
+    cut = utils.formatId
+
+    actual = cut('teamid', 'team')
+
+    expect(actual).toEqual('team_teamid')
+
+  it 'returns the id if already prepended with the typeName', () ->
+    cut = utils.formatId
+
+    actual = cut('team_teamid', 'team')
+
+    expect(actual).toEqual('team_teamid')

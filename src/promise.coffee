@@ -113,4 +113,14 @@ Promise.setTimeout = Promise.denodeify((delay, args..., callback) ->
 
 Promise.exec = Promise.denodeify(exec)
 
+Promise.sendHttp = (promise, resp) ->
+  promise.then((doc) ->
+    resp.send(JSON.stringify(doc))
+  ).catch((err) ->
+    if err.statusCode
+      resp.status(err.statusCode).send(JSON.stringify(_.pick(err, 'error', 'reason', 'description', 'msg')))
+    else
+      resp.status(500).send(JSON.stringify({error: 'server error', msg: err}))
+  )
+
 module.exports = Promise

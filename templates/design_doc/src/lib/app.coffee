@@ -1,6 +1,6 @@
 _ = require('underscore')
-actions = require('./actions')
-audit = require('pantheon-helpers').design_docs.audit
+shared = require('./lib/shared')
+helpers = require('pantheon-helpers').helpers
 
 dd =
   views: {}
@@ -12,8 +12,5 @@ dd =
   updates: {}
 
   rewrites: []
-
-audit.mixin(dd)
-actions.mixin(dd)
 
 module.exports = dd

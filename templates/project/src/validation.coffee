@@ -1,0 +1,3 @@
+validationFunctions = {}
+
+module.exports = validationFunctions

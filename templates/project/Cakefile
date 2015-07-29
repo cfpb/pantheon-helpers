@@ -96,6 +96,7 @@ task 'start_design_doc', 'create a new kanso design doc directory', (options) ->
       f = fs.openSync(KANSO_PATH, 'w')
       fs.writeSync(f, new_kanso_raw)
 
+      fs.symlinkSync('../../../shared.js', path.join(DD_LIB_DIR, 'lib', 'shared.js'))
       fs.symlinkSync('../../../../node_modules/pantheon-helpers/', path.join(DD_LIB_DIR, 'packages', 'pantheon-helpers'))
 
       console.log('\nCleaning up...')

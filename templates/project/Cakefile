@@ -22,7 +22,7 @@ task 'watch', 'Watch src directory and build the .js files', (options) ->
 task 'runtestserver', 'Run the server (port 5000); restart on change', (options) ->
   console.log('Running the server on port 5000; restarting on change')
   proxyExec("coffee --watch --output ./lib/ ./src/", process)
-  proxyExec("nodemon --watch ./lib ./lib/app.js", process)
+  proxyExec("nodemon --watch ./lib --ignore ./lib/design_docs ./lib/app.js", process)
 
 task 'runworker', 'Run the couchdb worker', (options) ->
   console.log('Running the couchdb worker')

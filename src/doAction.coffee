@@ -49,10 +49,10 @@ a.runHandler = (actionHandler, doc, action, actor) ->
   catch e
     throw({code: 500, body: {"status": "error", "msg": e}})
 
-a.doAction = (couchUtils, dbName, actionHandlers, validationFns, getDocType, prepDoc, shouldSkipValidationForUser) ->
+a.doAction = (dbName, couchUtils, actionHandlers, validationFns, getDocType, prepDoc, shouldSkipValidationForUser) ->
   validateDocUpdate = validate.validateDocUpdate(validationFns, getDocType, shouldSkipValidationForUser)
   getActionHandler = a.getActionHandler(actionHandlers, getDocType)
-  doAction = (actorName, docId, action) ->
+  doAction = (dbName, actorName, docId, action) ->
     ###
     return a doAction method to perform actions of documents in databases
     returned doAction function returns a promise.
@@ -64,6 +64,7 @@ a.doAction = (couchUtils, dbName, actionHandlers, validationFns, getDocType, pre
       validateDocUpdate:
       prepDoc:
     returned doAction method args:
+      dbName: (only if dbName above is undefined)
       actorName: name (or user object) of the user performing the action
       docId: docId (or document object) of the document on which to perform action
       action: action object describing the action
@@ -98,7 +99,7 @@ a.doAction = (couchUtils, dbName, actionHandlers, validationFns, getDocType, pre
       client.use(dbName).insert(doc, 'promise').catch((err) ->
         if err.statusCode == 409
           originalId = docId?._id or docId
-          return doAction(actorName, originalId, oldAction)
+          return doAction(dbName, actorName, originalId, oldAction)
         else
           return Promise.reject(err)
       ).then(() -> Promise.resolve([actor, doc]))
@@ -106,5 +107,11 @@ a.doAction = (couchUtils, dbName, actionHandlers, validationFns, getDocType, pre
       outDoc = if prepDoc then prepDoc(doc, actor) else doc
       return Promise.resolve(outDoc)
     )
-   return doAction
+
+  if dbName?
+    return (actorName, docId, action) ->
+      return doAction(dbName, actorName, docId, action)
+  else
+    return doAction
+
 module.exports = a

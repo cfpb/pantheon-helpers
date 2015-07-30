@@ -53,9 +53,10 @@ In your microservice application's home directory, run:
 
 ```coffeescript
 doAction = require('./doAction')
-doAction(actorName, docId, {a: 'action name', ...})
+doAction(dbName, actorName, docId, {a: 'action name', ...})
 ```
 
+dbName is only required if you don't specify it in `src/doAction`.
 The actorName is the name (not ID) of the user performing the action.
 The docId is the ID of the document to be modified,
 null if the action creates a new document.
@@ -494,7 +495,9 @@ A couple of notes:
   * We put prepDocthis file is called `shared.coffee` because it is available in from both Node and CouchDB.
   You can create other shared files by symlinking them into your design doc's `lib` folder at `$SISYPHUS/lib/design_docs/$DESIGNDOCNAME/lib`
 
-Now, let's modify `src/doAction.coffee`: set `dbName = 'boulder'` so it modifies documents in the right database.
+Now, let's modify `src/doAction.coffee`: set `dbName = 'boulder'` so it modifies documents in the right database. 
+If our application needed to perform actions on multiple databases we could leave `dbName = null`.
+We would then have to specify the dbName as the first argument every time we performed an action.
 
 There are several other functions you might need to modify for your own application in `shared.coffee` or `doAction.coffee`,
 including `shouldSkipValidationForUser`, and `getDocType`.

@@ -5,11 +5,12 @@ validationFns = require('./validation')
 shared = require('./shared')
 
 ###
-change this to the db where you are storing your documents.
-If your system uses more than one database, export multiple doAction functions,
-one for each databasae
+If your app only uses one DB, set dbName to the name of your DB.
+You can then call `doAction(actor, docId, action)`
+If you leave `dbName = null` then you must specify the
+database every time: `doAction(dbName, actor, docId, action)`
 ###
-dbName = 'DBNAME' 
+dbName = null
 
 getDocType = shared.getDocType 
 
@@ -22,8 +23,8 @@ shouldSkipValidationForUser = (actor) ->
     """
     return false
 
-module.exports = doAction(couchUtils,
-                          dbName,
+module.exports = doAction(dbName,
+                          couchUtils,
                           actionHandlers,
                           validationFns,
                           getDocType,

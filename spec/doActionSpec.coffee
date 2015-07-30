@@ -209,7 +209,17 @@ describe 'doAction', () ->
       return doc
     this.getDocType = (doc) ->
       return 'team'
-    this.doAction = doAction.doAction(this.couchUtils, 'dbName', this.actions, 'validationFns', this.getDocType, null, 'shouldSkipValidationForUser')
+    this.doAction = doAction.doAction('dbName', this.couchUtils, this.actions, 'validationFns', this.getDocType, null, 'shouldSkipValidationForUser')
+
+  it 'lets you specify the dbName at call time, if you set dbName to null/undefined during setup', (done) ->
+    this.doAction = doAction.doAction(null, this.couchUtils, this.actions, 'validationFns', this.getDocType, null, 'shouldSkipValidationForUser')
+
+    cut = this.doAction
+
+    cut('dbName', 'user1', 'docId', this.action).then(() =>
+      expect(doAction.getDoc).toHaveBeenCalledWith(this.client, 'dbName', 'docId')
+      done()
+    ).catch(done)
 
   it 'sets up validateDocUpdate and getActionHandler', (done) ->
     cut = this.doAction
@@ -316,7 +326,7 @@ describe 'doAction', () ->
 
   it 'calls prepDoc with the document and the actor, if the prepDoc function exists', (done) ->
     spyOn(this, 'prepDoc').andReturn({prepped: true})
-    this.doAction = doAction.doAction(this.couchUtils, 'dbName', this.actions, 'validationFns', this.getDocType, this.prepDoc, 'shouldSkipValidationForUser')
+    this.doAction = doAction.doAction('dbName', this.couchUtils, this.actions, 'validationFns', this.getDocType, this.prepDoc, 'shouldSkipValidationForUser')
 
     cut = this.doAction
 

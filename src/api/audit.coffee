@@ -1,8 +1,8 @@
 _ = require('underscore')
 Promise = require('../promise')
 
-audit = (dbNames, couch_utils) ->
-  conf = couch_utils.conf
+audit = (dbNames, couchUtils) ->
+  conf = couchUtils.conf
   audit = {}
 
 

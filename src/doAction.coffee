@@ -3,20 +3,11 @@ uuid = require('node-uuid')
 Promise = require('./promise')
 a = {}
 validate = require('./validateDocUpdate')
+utils = require('./utils')
 
 deepSimpleClone = (obj) ->
   return JSON.parse(JSON.stringify(obj))
 
-a.getUser = (client, systemUserName, userName) ->
-  ### returns promise ###
-  if _.isObject(userName)  # if a user object was passed, instead of a username, return the user object
-    return Promise.resolve(userName)
-  if userName == systemUserName
-    systemUser = {name: systemUserName, roles: []}
-    return Promise.resolve(systemUser)
-  else
-    userDb = client.use('_users')
-    return userDb.get('org.couchdb.user:' + userName, 'promise')
 
 a.getDoc = (client, dbName, docId) ->
   ### returns promise ###
@@ -73,9 +64,8 @@ a.doAction = (dbName, couchUtils, actionHandlers, validationFns, getDocType, pre
     _.defaults(action, {id: uuid.v4()})
 
     client = couchUtils.nano_user(actorName.name or actorName)
-    systemUserName = couchUtils.conf.COUCHDB.SYSTEM_USER
 
-    actorPromise = a.getUser(client, systemUserName, actorName)
+    actorPromise = utils.getActor(couchUtils, actorName)
     docPromise = a.getDoc(client, dbName, docId)
 
     Promise.all([actorPromise, docPromise]).then(([actor, doc]) ->
@@ -97,7 +87,7 @@ a.doAction = (dbName, couchUtils, actionHandlers, validationFns, getDocType, pre
       doc.audit.push(action)
 
       client.use(dbName).insert(doc, 'promise').catch((err) ->
-        if err.statusCode == 409
+        if err.statusCode == 409 and docId?
           originalId = docId?._id or docId
           return doAction(dbName, actorName, originalId, oldAction)
         else

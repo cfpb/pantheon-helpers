@@ -2,12 +2,12 @@ _ = require('underscore')
 {exec} = require 'child_process'
 
 u =
-  mk_objs: (obj, path_array, val={}) ->
+  mkObjs: (obj, path_array, val={}) ->
     ###
     make a set of nested object.
 
     obj = {'x': 1}
-    mk_objs(obj, ['a', 'b'], ['1'])
+    mkObjs(obj, ['a', 'b'], ['1'])
     # returns []
     # obj now equals {'x': 1, 'a': {'b': ['1']}}
 
@@ -25,7 +25,7 @@ u =
       throw new Error('item at "' + path_part + '" must be an Object, but it is an Array.')
     else if path_array.length and not _.isObject(obj[path_part])
       throw new Error('item at "' + path_part + '" must be an Object, but it is a ' + typeof(obj[path_part]) + '.')
-    return u.mk_objs(obj[path_part], path_array, val)
+    return u.mkObjs(obj[path_part], path_array, val)
 
 u.process_resp = (opts, callback) ->
   ###
@@ -134,5 +134,19 @@ u.formatId = (id, typeName) ->
     return id
   else
     return typeName + '_' + id
+
+u.getActor = (couchUtils, userName) ->
+  Promise = require('./promise')
+  systemUserName = couchUtils.conf.COUCHDB.SYSTEM_USER
+  ### returns promise ###
+  if _.isObject(userName)  # if a user object was passed, instead of a username, return the user object
+    return Promise.resolve(userName)
+  if userName == systemUserName
+    systemUser = {name: systemUserName, roles: []}
+    return Promise.resolve(systemUser)
+  else
+    userDb = couchUtils.get_system_user().use('_users')
+    return userDb.get('org.couchdb.user:' + userName, 'promise')
+
 
 module.exports = u

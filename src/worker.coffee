@@ -2,7 +2,6 @@ _ = require('underscore')
 follow = require('follow')
 utils = require('./utils')
 Promise = require('promise')
-logger = require('./loggers').worker
 x = {}
 
 clone = (obj) ->
@@ -23,23 +22,28 @@ x.get_handlers = (handlers, entry, doc_type) ->
   else
     return {}
 
-x.get_plugin_handlers = (handlers, entry, doc_type) ->
+x.getPluginHandlers = (plugins, entry, docType) ->
   ###
   return a hash of {resource: handler} for each resource that
   has specified a handler for this entry's action.
+  * plugins: list of plugins of format: [{name: pluginName, workers: {handlers}}]
+  * entry: audit entry
+  * docType: document type
   ###
-  filtered_handlers = {}
-  for plugin, plugin_handlers of handlers
-    handler = plugin_handlers[doc_type]?[entry.a]
+  filteredHandlers = {}
+  for plugin in plugins
+    pluginName = plugin.name
+    pluginHandlers = plugin.workers
+    handler = pluginHandlers[docType]?[entry.a]
     if not handler
-      entry_plugin = entry.plugin or entry.resource
-      if entry_plugin == plugin
-        handler = plugin_handlers[doc_type]?.self?[entry.a]
+      entryPlugin = entry.plugin or entry.resource
+      if entryPlugin == pluginName
+        handler = pluginHandlers[docType]?.self?[entry.a]
       else
-        handler = plugin_handlers[doc_type]?.other?[entry.a]
+        handler = pluginHandlers[docType]?.other?[entry.a]
     if handler
-      filtered_handlers[plugin] = handler
-  return filtered_handlers
+      filteredHandlers[pluginName] = handler
+  return filteredHandlers
 
 x.get_audit_entries_to_sync = (doc) ->
   now = +new Date()
@@ -62,7 +66,7 @@ x.update_document_with_worker_result = (doc) ->
     new_data = result.value?.data or result.error?.data
 
     if new_data and data_path
-      existing_data = utils.mk_objs(doc, data_path, {})
+      existing_data = utils.mkObjs(doc, data_path, {})
       _.extend(existing_data, new_data)
 
 x.update_audit_entry = (doc) ->

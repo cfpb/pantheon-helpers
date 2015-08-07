@@ -29,4 +29,4 @@ s.prepDoc = (doc) ->
     doc = prepDoc(doc)
   return doc
 
-module.export(s)
+module.exports = s

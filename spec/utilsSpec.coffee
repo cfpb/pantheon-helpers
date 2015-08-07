@@ -1,42 +1,43 @@
 utils = require('../lib').utils
+Promise = require('../lib/promise')
 
-describe 'mk_objs', () ->
+describe 'mkObjs', () ->
   it 'traverses existing objects to return object at path', () ->
     obj = {a: {b: {c: 'd'}}}
-    actual = utils.mk_objs(obj, ['a', 'b', 'c'])
+    actual = utils.mkObjs(obj, ['a', 'b', 'c'])
     expect(actual).toEqual('d')
 
   it 'sets the item at path to be val, if the item does not exist', () ->
     obj = {a: {b: {}}}
     val = {}
-    utils.mk_objs(obj, ['a', 'b', 'c'], val)    
+    utils.mkObjs(obj, ['a', 'b', 'c'], val)    
     expect(obj.a.b.c).toBe(val)
 
   it 'defaults val to be an empty object', () ->
     obj = {a: {b: {}}}
-    utils.mk_objs(obj, ['a', 'b', 'c'])
+    utils.mkObjs(obj, ['a', 'b', 'c'])
     expect(obj.a.b.c).toEqual({})
 
   it 'creates any missing objects on path', () ->
     obj = {a: {}}
-    actual = utils.mk_objs(obj, ['a', 'b', 'c'])
+    actual = utils.mkObjs(obj, ['a', 'b', 'c'])
     expect(obj).toEqual({a: {b: {c: {}}}})
 
   it 'returns the created object at path', () ->
     obj = {a: {}}
-    actual = utils.mk_objs(obj, ['a', 'b', 'c'])
+    actual = utils.mkObjs(obj, ['a', 'b', 'c'])
     expect(actual).toBe(obj.a.b.c)
 
   it 'errors if a traversed item is not an object', () ->
     expect(() ->
       obj = {a: 1}
-      actual = utils.mk_objs(obj, ['a', 'b', 'c'])
+      actual = utils.mkObjs(obj, ['a', 'b', 'c'])
     ).toThrow()
 
   it 'errors if a traversed item is an array', () ->
     expect(() ->
       obj = {a: []}
-      actual = utils.mk_objs(obj, ['a', 'b', 'c'])
+      actual = utils.mkObjs(obj, ['a', 'b', 'c'])
     ).toThrow()
 
 
@@ -88,30 +89,6 @@ describe 'process_resp', () ->
       done()
 
     utils.process_resp({body_only: true}, callback)(null, {statusCode:200}, 'body')
-
-# no longer in utils, just in template shared.coffee, but can't test that
-# describe 'getDocType', () ->
-#   it 'returns `user` when the doc is a user document (id starts with `org.couchdb.user:`', () ->
-#     cut = utils.getDocType
-
-#     actual = cut({_id: 'org.couchdb.user:cuwmg483cuhew'})
-
-#     expect(actual).toEqual('user')
-
-
-#   it 'returns the type as prepended to the _id, and separated by an _', () ->
-#     cut = utils.getDocType
-
-#     actual = cut({_id: 'type_cuwmg483cuhew'})
-
-#     expect(actual).toEqual('type')
-
-#   it 'returns null if there is no valid type to be pulled from the id', () ->
-#     cut = utils.getDocType
-
-#     actual = cut({_id: '_cuwmg483cuhew'})
-
-#     expect(actual).toEqual(null)
 
 
 describe 'removeInPlace', () ->
@@ -188,3 +165,43 @@ describe 'formatId', () ->
     actual = cut('team_teamid', 'team')
 
     expect(actual).toEqual('team_teamid')
+
+describe 'getActor', () ->
+  beforeEach () ->
+    this.user1 = {name: 'user1', _id: 'ord.couchdb.user:user1', _rev: '12'}
+    this.dbClient = {
+      get: jasmine.createSpy('get').andReturn(Promise.resolve(this.user1))
+    }
+    this.client = {
+      use: jasmine.createSpy('use').andReturn(this.dbClient)
+    }
+    this.couchUtils = {
+      get_system_user:  jasmine.createSpy('get_system_user').andReturn(this.client),
+      conf: {COUCHDB: {SYSTEM_USER: 'systemUser'}},
+    }
+
+  it 'returns the user from the database given the userName', (done) ->
+    cut = utils.getActor
+    cut(this.couchUtils, 'user1').then((user) =>
+      expect(this.dbClient.get).toHaveBeenCalledWith('org.couchdb.user:user1', 'promise')
+      expect(user).toEqual(this.user1)
+      done()
+    ).catch(done)
+
+  it 'returns the existing user object without hitting DB if userName is a user objec', (done) ->
+    originalUser = {name: 'user1'}
+
+    cut = utils.getActor
+    cut(this.couchUtils, originalUser).then((user) =>
+      expect(this.dbClient.get).not.toHaveBeenCalled()
+      expect(user).toBe(originalUser)
+      done()
+    ).catch(done)
+
+  it 'returns a system user stub if the system user is requested', (done) ->
+    cut = utils.getActor
+    cut(this.couchUtils, 'systemUser').then((user) =>
+      expect(this.dbClient.get).not.toHaveBeenCalled()
+      expect(user).toEqual({name: 'systemUser', roles: []})
+      done()
+    ).catch(done)

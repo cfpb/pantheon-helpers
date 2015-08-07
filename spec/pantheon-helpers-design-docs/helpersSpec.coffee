@@ -1,23 +1,7 @@
-h = require('../../lib/pantheon-helpers-design-docs/helpers')
+helpers = require('../../lib/pantheon-helpers-design-docs/helpers')
 _ = require('underscore')
 
-
-describe 'JSONResponse', () ->
-  it 'takes a document and formats it for CouchDB as a proper JSON response', () ->
-    cut = h.JSONResponse
-
-    doc = {a: 'b'}
-    
-    actual = cut(doc)
-
-    expect(actual).toEqual({
-      headers: {
-        'Content-Type': "application/json"
-      }
-      body: JSON.stringify(doc),
-    })
-
-beforeEachListShow = () ->
+beforeEvery = () ->
   this.sent = ''
   this.send = jasmine.createSpy('send').andCallFake((data) => this.sent += data)
   this.start = jasmine.createSpy('start')
@@ -33,15 +17,33 @@ beforeEachListShow = () ->
     getDocType: jasmine.createSpy('getDocType').andCallFake((doc) -> return doc._id.split('_')[0])
     prepDoc: jasmine.createSpy('prepDoc').andCallFake((doc) -> doc.prepped=true; return doc)
   }
-  h.shared = this.shared
+  this.helpers = helpers(this.shared, this.getRow, this.start, this.send)
+
+describe 'JSONResponse', () ->
+  beforeEach beforeEvery
+
+  it 'takes a document and formats it for CouchDB as a proper JSON response', () ->
+    
+    cut = this.helpers.JSONResponse
+
+    doc = {a: 'b'}
+    
+    actual = cut(doc)
+
+    expect(actual).toEqual({
+      headers: {
+        'Content-Type': "application/json"
+      }
+      body: JSON.stringify(doc),
+    })
 
 describe 'sendNakedList', () ->
-  beforeEach beforeEachListShow
+  beforeEach beforeEvery
 
   it 'sends a proper header', () ->
-    cut = h.sendNakedList
+    cut = this.helpers.sendNakedList
 
-    cut(this.getRow, this.start, this.send, (row) -> return row)
+    cut((row) -> return row)
 
     expect(this.start).toHaveBeenCalledWith({
       headers: {
@@ -50,112 +52,136 @@ describe 'sendNakedList', () ->
     })
 
   it 'returns a json serialized representation of data', () ->
-    cut = h.sendNakedList
+    cut = this.helpers.sendNakedList
 
-    cut(this.getRow, this.start, this.send, (row) -> return row)
+    cut((row) -> return row)
 
     actual = JSON.parse(this.sent)
     expect(actual).toEqual(this.rows)
 
   it 'transforms each row according to the transformRow function', () ->
-    cut = h.sendNakedList
+    cut = this.helpers.sendNakedList
 
     transformRow = (row) -> return row.doc
-    cut(this.getRow, this.start, this.send, transformRow)
+    cut(transformRow)
 
     actual = JSON.parse(this.sent)
     expect(actual).toEqual(this.rows.map(transformRow))
 
   it 'skips rows that throw a "skipped" string', () ->
-    cut = h.sendNakedList
+    cut = this.helpers.sendNakedList
 
     transformRow = (row) ->
       if row.key % 2 then throw 'skip'
       return row
-    cut(this.getRow, this.start, this.send, transformRow)
+    cut(transformRow)
 
     actual = JSON.parse(this.sent)
     expect(actual).toEqual(_.filter(this.rows, (row) -> not (row.key % 2)))
 
+
 describe 'get_prepped_of_type', () ->
   beforeEach () ->
-    beforeEachListShow.apply(this)
-    spyOn(h, 'sendNakedList')
+    beforeEvery.apply(this)
+    spyOn(this.helpers, 'sendNakedList')
 
   it 'returns a couchdb list function', () ->
-    cut = h.listGenerators.get_prepped_of_type
+    cut = this.helpers.listGenerators.get_prepped_of_type
     actual = cut('team')
 
     expect(actual).toEqual(jasmine.any(Function))
 
   it 'delegates to sendNakedList', () ->
-    cut = h.listGenerators.get_prepped_of_type
+    cut = this.helpers.listGenerators.get_prepped_of_type
 
     cut('team')('header', 'req')
 
-    expect(h.sendNakedList).toHaveBeenCalled()
+    expect(this.helpers.sendNakedList).toHaveBeenCalled()
 
   it 'passes a transformRow function that skips when not of matching type', () ->
-    cut = h.listGenerators.get_prepped_of_type('team')('header', 'req')
-    rowTransform = h.sendNakedList.calls[0].args[3]
+    cut = this.helpers.listGenerators.get_prepped_of_type('team')('header', 'req')
+    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
 
     expect(() ->
       rowTransform({doc: {_id: 'user_4'}})
     ).toThrow('skip')
 
   it 'passes a transformRow function that preps docs that are of the matching type', () ->
-    cut = h.listGenerators.get_prepped_of_type('team')('header', 'req')
-    rowTransform = h.sendNakedList.calls[0].args[3]
+    cut = this.helpers.listGenerators.get_prepped_of_type('team')('header', 'req')
+    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
 
     actual = rowTransform({doc: {_id: 'team_4'}})
     expect(actual).toEqual({_id: 'team_4', prepped: true})
+
 
 describe 'lists.get_prepped', () ->
   beforeEach () ->
-    beforeEachListShow.apply(this)
-    spyOn(h, 'sendNakedList')
+    beforeEvery.apply(this)
+    spyOn(this.helpers, 'sendNakedList')
 
   it 'delegates to sendNakedList', () ->
-    cut = h.lists.get_prepped
+    cut = this.helpers.lists.get_prepped
 
     cut('header', 'req')
 
-    expect(h.sendNakedList).toHaveBeenCalled()
+    expect(this.helpers.sendNakedList).toHaveBeenCalled()
 
   it 'passes a transformRow function that preps docs', () ->
-    h.lists.get_prepped('header', 'req')
+    this.helpers.lists.get_prepped('header', 'req')
 
-    rowTransform = h.sendNakedList.calls[0].args[3]
+    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
 
     actual = rowTransform({doc: {_id: 'team_4'}})
     expect(actual).toEqual({_id: 'team_4', prepped: true})
 
+
 describe 'lists.get_values', () ->
   beforeEach () ->
-    beforeEachListShow.apply(this)
-    spyOn(h, 'sendNakedList')
+    beforeEvery.apply(this)
+    spyOn(this.helpers, 'sendNakedList')
 
   it 'delegates to sendNakedList', () ->
-    cut = h.lists.get_values
+    cut = this.helpers.lists.get_values
 
     cut('header', 'req')
 
-    expect(h.sendNakedList).toHaveBeenCalled()
+    expect(this.helpers.sendNakedList).toHaveBeenCalled()
 
   it 'passes a transformRow function that returns the row value', () ->
-    h.lists.get_values('header', 'req')
+    this.helpers.lists.get_values('header', 'req')
 
-    rowTransform = h.sendNakedList.calls[0].args[3]
+    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
 
     actual = rowTransform({doc: {_id: 'team_4'}, value: 'a'})
     expect(actual).toEqual('a')
 
+
+describe 'lists.get_first_prepped', () ->
+  beforeEach beforeEvery
+
+  it 'gets the first row and returns the result from sending it through shows.get_prepped', () ->
+    spyOn(this.helpers.shows, 'get_prepped').andReturn('prepped')
+
+    cut = this.helpers.lists.get_first_prepped
+    actual = cut()
+
+    expect(this.getRow.calls.length).toEqual(1)
+    expect(this.helpers.shows.get_prepped).toHaveBeenCalledWith(this.rows[0].doc)
+    expect(actual).toEqual('prepped')
+
+  it 'throws a 404 error if there are no rows', () ->
+    this.getRow.andReturn(undefined)
+
+    cut = this.helpers.lists.get_first_prepped
+
+    expect(cut).toThrow(['error', 'not_found', 'document matching query does not exist'])
+
+
 describe 'shows.get_prepped', () ->
-  beforeEach () ->
-    beforeEachListShow.apply(this)
+  beforeEach beforeEvery
 
   it 'returns the prepared doc, as a json response', () ->
-    cut = h.shows.get_prepped
+    cut = this.helpers.shows.get_prepped
 
     actual = cut({_id: 'team_4'}, 'req')
 

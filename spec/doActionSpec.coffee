@@ -1,49 +1,7 @@
 doAction = require('../lib/doAction')
 Promise = require('../lib/promise')
 validate = require('../lib/validateDocUpdate')
-    # this.nano_user = jasmine.createSpy('use')
-    # this.couchUtils = {
-    #   getUuid: jasmine.createSpy('getUuid')
-    #   use: jasmine.createSpyObj('use', [''])
-    # }
-
-
-describe 'getUser', () ->
-  beforeEach () ->
-    this.user1 = {name: 'user1', _id: 'ord.couchdb.user:user1', _rev: '12'}
-    this.dbClient = {
-      get: jasmine.createSpy('get').andReturn(Promise.resolve(this.user1))
-    }
-    this.client = {
-      use: jasmine.createSpy('use').andReturn(this.dbClient)
-    }
-
-  it 'returns the user from the database given the userName', (done) ->
-    cut = doAction.getUser
-    cut(this.client, 'system', 'user1').then((user) =>
-      expect(this.dbClient.get).toHaveBeenCalledWith('org.couchdb.user:user1', 'promise')
-      expect(user).toEqual(this.user1)
-      done()
-    ).catch(done)
-
-  it 'returns the existing user object without hitting DB if userName is a user objec', (done) ->
-    originalUser = {name: 'user1'}
-
-    cut = doAction.getUser
-    cut(this.client, 'system', originalUser).then((user) =>
-      expect(this.dbClient.get).not.toHaveBeenCalled()
-      expect(user).toBe(originalUser)
-      done()
-    ).catch(done)
-
-  it 'returns a system user stub if the system user is requested', (done) ->
-    cut = doAction.getUser
-    cut(this.client, 'system', 'system').then((user) =>
-      expect(this.dbClient.get).not.toHaveBeenCalled()
-      expect(user).toEqual({name: 'system', roles: []})
-      done()
-    ).catch(done)
-
+utils = require('../lib/utils')
 
 describe 'getDoc', () ->
   beforeEach () ->
@@ -168,7 +126,7 @@ describe 'doAction', () ->
     this.doc = {_id: 'team_test', _rev: 'xxx', data: {a:'same'}, audit: []}
     this.newDoc = {_id: 'new_uuid', audit: []}
     this.actor = {name: 'user1'}
-    spyOn(doAction, 'getUser').andReturn(Promise.resolve(this.actor))
+    spyOn(utils, 'getActor').andReturn(Promise.resolve(this.actor))
     spyOn(doAction, 'getDoc').andReturn(Promise.resolve(this.doc))
     this.getActionHandler = jasmine.createSpy('getActionHandler').andReturn('actionHandler')
     spyOn(doAction, 'getActionHandler').andReturn(this.getActionHandler)
@@ -183,8 +141,8 @@ describe 'doAction', () ->
       use: jasmine.createSpy('use').andReturn(this.dbClient)
     }
     this.couchUtils = {
+      nano_system_user: jasmine.createSpy('nano_system_user').andReturn(this.client),
       nano_user: jasmine.createSpy('nano_user').andReturn(this.client),
-      conf: {COUCHDB: {SYSTEM_USER: 'systemUser'}},
     }
 
     this.actions =
@@ -235,7 +193,7 @@ describe 'doAction', () ->
 
     cut('user1', 'docId', this.action).then(() =>
       expect(this.couchUtils.nano_user).toHaveBeenCalledWith('user1')
-      expect(doAction.getUser).toHaveBeenCalledWith(this.client, this.couchUtils.conf.COUCHDB.SYSTEM_USER, 'user1')
+      expect(utils.getActor).toHaveBeenCalledWith(this.couchUtils, 'user1')
       expect(doAction.getDoc).toHaveBeenCalledWith(this.client, 'dbName', 'docId')
       done()
     ).catch(done)
@@ -279,8 +237,22 @@ describe 'doAction', () ->
     cut = this.doAction
 
     cut('user1', 'docId', this.action).then(() =>
-      expect(doAction.getUser.calls.length).toBe(2)
+      expect(utils.getActor.calls.length).toBe(2)
       done()
+    ).catch(done)
+
+  it 'does not retry doAction if there is a 409 conflict for a newly created document', (done) ->
+    doAction.runHandler.andCallFake((actionHandler, doc, action, actor) -> doc.modified = true)
+    this.dbClient.insert.andReturn(Promise.reject({statusCode: 409}))
+
+    cut = this.doAction
+
+    cut('user1', null, this.action).then(
+      () =>
+        done('expected 409 error, but promise resolved')
+      (err) =>
+        expect(err).toEqual({statusCode: 409})
+        done()
     ).catch(done)
 
   it 'rethrows any non-409 couchdb errors', (done) ->

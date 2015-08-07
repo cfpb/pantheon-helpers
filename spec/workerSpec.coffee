@@ -26,23 +26,31 @@ describe 'get_handlers', () ->
     expect(actual).toEqual({})
 
 
-describe 'get_plugin_handlers', () ->
-  handlers = 
-    plugin1:
-      team:
-        'u+': '1u+'
-        'u-': '1u-'
-        self:
-          'a+': '1sa+'
-        other:
-          'a+': '1oa+'
-    plugin2:
-      team:
-        'u+': '2u+'
-        self:
-          'a+': '2sa+'
-        other:
-          'a+': '2oa+'
+describe 'getPluginHandlers', () ->
+  plugins = 
+    [
+      {
+        name: 'plugin1',
+        workers: {
+          team: {
+            'u+': '1u+',
+            'u-': '1u-',
+            self: {'a+': '1sa+'},
+            other: {'a+': '1oa+'}
+          }
+        }
+      },
+      {
+        name: 'plugin2',
+        workers: {
+          team: {
+            'u+': '2u+',
+            self: {'a+': '2sa+'},
+            other: {'a+': '2oa+'}
+          }
+        }
+      }
+    ]
 
   event = {
     a: 'u+',
@@ -50,17 +58,17 @@ describe 'get_plugin_handlers', () ->
   }
   it 'returns a matching handler for each plugin', () ->
     event = {a: 'u+'}
-    actual = worker.get_plugin_handlers(handlers, event, 'team')
+    actual = worker.getPluginHandlers(plugins, event, 'team')
     expect(actual).toEqual({plugin1: '1u+', plugin2: '2u+'})
 
   it 'returns the self handler for the event plugin and an other handler for all other plugins', () ->
     event = {a: 'a+', plugin: 'plugin1'}
-    actual = worker.get_plugin_handlers(handlers, event, 'team')
+    actual = worker.getPluginHandlers(plugins, event, 'team')
     expect(actual).toEqual({plugin1: '1sa+', plugin2: '2oa+'})
 
   it 'only returns handlers that exist', () ->
     event = {a: 'u-'}
-    actual = worker.get_plugin_handlers(handlers, event, 'team')
+    actual = worker.getPluginHandlers(plugins, event, 'team')
     expect(actual).toEqual({plugin1: '1u-'})
 
 
@@ -361,8 +369,8 @@ describe 'start_worker', () ->
     expect(follow.Feed).toHaveBeenCalledWith({db: 'url/db', include_docs: true})
 
   it 'attaches worker.on_change to the "change" event', () ->
-    worker.start_worker(this.logger, this.db, 'handlers', 'get_doc_type', 'get_plugin_handlers')
-    expect(worker.on_change).toHaveBeenCalledWith(this.logger, this.db, 'handlers', 'get_doc_type', 'get_plugin_handlers')
+    worker.start_worker(this.logger, this.db, 'handlers', 'get_doc_type', 'getPluginHandlers')
+    expect(worker.on_change).toHaveBeenCalledWith(this.logger, this.db, 'handlers', 'get_doc_type', 'getPluginHandlers')
     expect(this.feedOn).toHaveBeenCalledWith('change', 'on_change')
 
   it 'starts following the feed', () ->

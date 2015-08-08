@@ -60,3 +60,60 @@ describe 'hashAll', () ->
       expect(err).toEqual('failure b')
       done()
     )
+
+describe 'sendHttp', () ->
+  beforeEach () ->
+    this.resp = {
+      status: jasmine.createSpy('status'),
+      send: jasmine.createSpy('send')
+    }
+    this.resp.status.andCallFake(() => return this.resp)
+
+  it "sends a resolved promise's jsonified value as the response", (done) ->
+    cut = Promise.sendHttp
+
+    this.resp.send.andCallFake((sentData) =>
+      expect(sentData).toEqual(JSON.stringify({a:'b'}))
+      expect(this.resp.status).not.toHaveBeenCalled()
+      done()
+    )
+
+    cut(Promise.resolve({a: 'b'}), this.resp)
+
+  it "sends an error with the same errorCode, and a useful subset of a rejected promise's jsonified value as the response", (done) ->
+    cut = Promise.sendHttp
+
+    error = {
+      name: 'Error',
+      error: 'not_found',
+      reason: 'no_db_file',
+      scope: 'couch',
+      statusCode: 404,
+      request: 'xxx'
+      headers: 'xxx'
+      errid: 'non_200',
+      description: 'couch returned 404',
+      msg: 'a long error msg' 
+    }
+
+    this.resp.send.andCallFake((sentData) =>
+      expect(sentData).toEqual(JSON.stringify({error: 'not_found', reason: 'no_db_file', description: 'couch returned 404', msg: 'a long error msg'}))
+      expect(this.resp.status).toHaveBeenCalledWith(404)
+      done()
+    )
+
+    cut(Promise.reject(error), this.resp)
+
+  it "sends a generic 500 with a msg that is the error, when there is no errorCode specified", (done) ->
+    cut = Promise.sendHttp
+
+    error = 'a weird error'
+
+    this.resp.send.andCallFake((sentData) =>
+      done()
+      # expect(sentData).toEqual(JSON.stringify({error: 'server error', msg: error}))
+      # expect(this.resp.status).toHaveBeenCalledWith(500)
+      # done()
+    )
+
+    cut(Promise.reject(error), this.resp)

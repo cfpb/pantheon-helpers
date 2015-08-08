@@ -21,10 +21,12 @@ app.use(bodyParser.json())
 
 
 # allow system user to login with basic auth
-# prohibit everything else
 # if conf.DEV == true (for testing), then
 # unauthenticated reqs logged in as system user
-app.use(pantheonMiddleware.auth(conf))
+app.use(pantheonMiddleware.systemAuth(conf))
+
+# ensure that all requests are authenticated
+app.use(pantheonMiddleware.ensureAuthenticated)
 
 # attach a nano couch client authenticated as the
 # logged-in user to the request object

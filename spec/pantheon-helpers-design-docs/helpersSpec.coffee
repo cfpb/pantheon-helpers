@@ -1,100 +1,197 @@
-h = require('../../lib/pantheon-helpers-design-docs/helpers')
+helpers = require('../../lib/pantheon-helpers-design-docs/helpers')
+_ = require('underscore')
 
-describe 'mk_objs', () ->
-  it 'traverses existing objects to return object at path', () ->
-    obj = {a: {b: {c: 'd'}}}
-    actual = h.mk_objs(obj, ['a', 'b', 'c'])
-    expect(actual).toEqual('d')
+beforeEvery = () ->
+  this.sent = ''
+  this.send = jasmine.createSpy('send').andCallFake((data) => this.sent += data)
+  this.start = jasmine.createSpy('start')
+  pointer = 0
+  this.rows = [
+    {doc: {_id: 'team_1', body: 'a'}, key: 1, value: 'a'},
+    {doc: {_id: 'user_2', body: 'b'}, key: 2, value: 'b'},
+    {doc: {_id: 'team_3', body: 'c'}, key: 3, value: 'c'},
+    {doc: {_id: 'user_4', body: 'd'}, key: 4, value: 'd'},
+  ]
+  this.getRow = jasmine.createSpy('getRow').andCallFake(() => return this.rows[pointer++])
+  this.shared = {
+    getDocType: jasmine.createSpy('getDocType').andCallFake((doc) -> return doc._id.split('_')[0])
+    prepDoc: jasmine.createSpy('prepDoc').andCallFake((doc) -> doc.prepped=true; return doc)
+  }
+  this.helpers = helpers(this.shared)
 
-  it 'sets the item at path to be val, if the item does not exist', () ->
-    obj = {a: {b: {}}}
-    val = {}
-    h.mk_objs(obj, ['a', 'b', 'c'], val)    
-    expect(obj.a.b.c).toBe(val)
+describe 'JSONResponse', () ->
+  beforeEach beforeEvery
 
-  it 'defaults val to be an empty object', () ->
-    obj = {a: {b: {}}}
-    h.mk_objs(obj, ['a', 'b', 'c'])
-    expect(obj.a.b.c).toEqual({})
+  it 'takes a document and formats it for CouchDB as a proper JSON response', () ->
+    
+    cut = this.helpers.JSONResponse
 
-  it 'creates any missing objects on path', () ->
-    obj = {a: {}}
-    actual = h.mk_objs(obj, ['a', 'b', 'c'])
-    expect(obj).toEqual({a: {b: {c: {}}}})
+    doc = {a: 'b'}
+    
+    actual = cut(doc)
 
-  it 'returns the created object at path', () ->
-    obj = {a: {}}
-    actual = h.mk_objs(obj, ['a', 'b', 'c'])
-    expect(actual).toBe(obj.a.b.c)
+    expect(actual).toEqual({
+      headers: {
+        'Content-Type': "application/json"
+      }
+      body: JSON.stringify(doc),
+    })
 
-  it 'errors if a traversed item is not an object', () ->
+describe 'sendNakedList', () ->
+  beforeEach beforeEvery
+
+  it 'sends a proper header', () ->
+    cut = this.helpers.sendNakedList
+
+    cut(this.getRow, this.start, this.send, (row) -> return row)
+
+    expect(this.start).toHaveBeenCalledWith({
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+  it 'returns a json serialized representation of data', () ->
+    cut = this.helpers.sendNakedList
+
+    cut(this.getRow, this.start, this.send, (row) -> return row)
+
+    actual = JSON.parse(this.sent)
+    expect(actual).toEqual(this.rows)
+
+  it 'transforms each row according to the transformRow function', () ->
+    cut = this.helpers.sendNakedList
+
+    transformRow = (row) -> return row.doc
+    cut(this.getRow, this.start, this.send, transformRow)
+
+    actual = JSON.parse(this.sent)
+    expect(actual).toEqual(this.rows.map(transformRow))
+
+  it 'skips rows that throw a "skipped" string', () ->
+    cut = this.helpers.sendNakedList
+
+    transformRow = (row) ->
+      if row.key % 2 then throw 'skip'
+      return row
+    cut(this.getRow, this.start, this.send, transformRow)
+
+    actual = JSON.parse(this.sent)
+    expect(actual).toEqual(_.filter(this.rows, (row) -> not (row.key % 2)))
+
+
+describe 'get_prepped_of_type', () ->
+  beforeEach () ->
+    beforeEvery.apply(this)
+    spyOn(this.helpers, 'sendNakedList')
+
+  it 'delegates to sendNakedList', () ->
+    cut = this.helpers.lists.get_prepped_of_type
+
+    cut(this.getRow, this.start, this.send, 'team', 'header', 'req')
+
+    expect(this.helpers.sendNakedList).toHaveBeenCalledWith(this.getRow, this.start, this.send, jasmine.any(Function))
+
+  it 'passes a transformRow function that skips when not of matching type', () ->
+    cut = this.helpers.lists.get_prepped_of_type
+
+    cut(this.getRow, this.start, this.send, 'team', 'header', 'req')
+
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
+
     expect(() ->
-      obj = {a: 1}
-      actual = h.mk_objs(obj, ['a', 'b', 'c'])
-    ).toThrow()
+      rowTransform({doc: {_id: 'user_4'}})
+    ).toThrow('skip')
 
-  it 'errors if a traversed item is an array', () ->
-    expect(() ->
-      obj = {a: []}
-      actual = h.mk_objs(obj, ['a', 'b', 'c'])
-    ).toThrow()
+  it 'passes a transformRow function that preps docs that are of the matching type', () ->
+    cut = this.helpers.lists.get_prepped_of_type
 
-describe 'remove_in_place', () ->
-  it 'removes the value from the container array, if already there', () ->
-    actual = ['a', 'b', 'c']
-    h.remove_in_place(actual, 'b')
-    expect(actual).toEqual(['a', 'c'])
+    cut(this.getRow, this.start, this.send, 'team', 'header', 'req')
 
-  it 'does nothing if the value is not in the container', () ->
-    actual = ['a', 'c']
-    h.remove_in_place(actual, 'b')
-    expect(actual).toEqual(['a', 'c'])
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
 
-describe 'remove_in_place_by_id', () ->
-  it 'removes the record with the matching id, if already there', () ->
-    actual = [{id: 1}, {id: 2, val: 'a'}, {id:3}]
-    h.remove_in_place_by_id(actual, {id: 2})
-    expect(actual).toEqual([{id: 1}, {id:3}])
+    actual = rowTransform({doc: {_id: 'team_4'}})
+    expect(actual).toEqual({_id: 'team_4', prepped: true})
 
-  it 'returns the removed record', () ->
-    actual = h.remove_in_place_by_id([{id: 1}, {id: 2, val: 'a'}, {id:3}], {id: 2})
-    expect(actual).toEqual({id: 2, val: 'a'})
 
-  it 'does nothing if a record with a matching id is not in the container', () ->
-    actual = [{id: 1}, {id:3}]
-    h.remove_in_place_by_id(actual, {id: 2})
-    expect(actual).toEqual([{id: 1}, {id:3}])
+describe 'lists.get_prepped', () ->
+  beforeEach () ->
+    beforeEvery.apply(this)
+    spyOn(this.helpers, 'sendNakedList')
 
-  it 'returns undefined if nothing deleted', () ->
-    actual = h.remove_in_place_by_id([{id: 1}, {id:3}], {id: 2})
-    expect(actual).toBeUndefined()
+  it 'delegates to sendNakedList', () ->
+    cut = this.helpers.lists.get_prepped
 
-describe 'insert_in_place', () ->
-  it 'adds the value to the container array, if not already there', () ->
-    actual = ['a', 'b']
-    h.insert_in_place(actual, 'c')
-    expect(actual).toEqual(['a', 'b', 'c'])
+    cut(this.getRow, this.start, this.send, 'header', 'req')
 
-  it 'does nothing if the value is already there', () ->
-    actual = ['a', 'b', 'c']
-    h.insert_in_place(actual, 'c')
-    expect(actual).toEqual(['a', 'b', 'c'])
+    expect(this.helpers.sendNakedList).toHaveBeenCalledWith(this.getRow, this.start, this.send, jasmine.any(Function))
 
-describe 'insert_in_place_by_id', () ->
-  it 'adds the record if there is not already a record with a matching id', () ->
-    actual = [{id: 1}, {id:3}]
-    h.insert_in_place_by_id(actual, {id: 2})
-    expect(actual).toEqual([{id: 1}, {id:3}, {id: 2}])
+  it 'passes a transformRow function that preps docs', () ->
+    cut = this.helpers.lists.get_prepped
 
-  it 'returns the inserted record', () ->
-    actual = h.insert_in_place_by_id([{id: 1}, {id:3}], {id: 2})
-    expect(actual).toEqual({id: 2})
+    cut(this.getRow, this.start, this.send, 'header', 'req')
 
-  it 'does nothing if a record with the same id is already there', () ->
-    actual = [{id: 1}, {id: 2, val: 'a'}, {id:3}]
-    h.insert_in_place_by_id(actual, {id: 2})
-    expect(actual).toEqual([{id: 1}, {id: 2, val: 'a'}, {id:3}])
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
 
-  it 'returns the existing record', () ->
-    actual = h.insert_in_place_by_id([{id: 1}, {id: 2, val: 'a'}, {id:3}], {id: 2})
-    expect(actual).toEqual({id: 2, val: 'a'})
+    actual = rowTransform({doc: {_id: 'team_4'}})
+    expect(actual).toEqual({_id: 'team_4', prepped: true})
+
+
+describe 'lists.get_values', () ->
+  beforeEach () ->
+    beforeEvery.apply(this)
+    spyOn(this.helpers, 'sendNakedList')
+
+  it 'delegates to sendNakedList', () ->
+    cut = this.helpers.lists.get_values
+
+    cut(this.getRow, this.start, this.send, 'header', 'req')
+
+    expect(this.helpers.sendNakedList).toHaveBeenCalledWith(this.getRow, this.start, this.send, jasmine.any(Function))
+
+  it 'passes a transformRow function that returns the row value', () ->
+    this.helpers.lists.get_values('header', 'req')
+
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
+
+    actual = rowTransform({doc: {_id: 'team_4'}, value: 'a'})
+    expect(actual).toEqual('a')
+
+
+describe 'lists.get_first_prepped', () ->
+  beforeEach beforeEvery
+
+  it 'gets the first row and returns the result properly formed and prepped', () ->
+    
+
+    cut = this.helpers.lists.get_first_prepped
+    actual = cut(this.getRow, this.start, this.send)
+
+    expect(this.getRow.calls.length).toEqual(1)
+    expect(this.start).toHaveBeenCalledWith({
+      headers: {
+        'Content-Type': "application/json"
+      }
+    })
+    expect(JSON.parse(this.sent).prepped).toBe(true)
+
+  it 'throws a 404 error if there are no rows', () ->
+    this.getRow.andReturn(undefined)
+
+    cut = this.helpers.lists.get_first_prepped
+
+    expect(() =>
+      cut(this.getRow, this.start, this.send, 'req', 'resp')
+    ).toThrow(['error', 'not_found', 'document matching query does not exist'])
+
+
+describe 'shows.get_prepped', () ->
+  beforeEach beforeEvery
+
+  it 'returns the prepared doc, as a json response', () ->
+    cut = this.helpers.shows.get_prepped
+
+    actual = cut({_id: 'team_4'}, 'req')
+
+    expect(JSON.parse(actual.body).prepped).toBe(true)
+

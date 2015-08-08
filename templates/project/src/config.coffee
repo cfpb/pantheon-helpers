@@ -1,5 +1,10 @@
-_ = require('underscore')
-config_secret = require('./config_secret')
+deepExtend = require('pantheon-helpers').utils.deepExtend
+path = require('path')
+
+try
+    config_secret = require('./config_secret')
+catch e
+    config_secret = {}
 
 config = 
   COUCHDB:
@@ -28,7 +33,8 @@ config =
         stream: process.stdout,
         level: "info"
       }]
+  COUCH_DESIGN_DOCS_DIR: path.join(__dirname, '/design_docs')
 
-_.extend(config, config_secret)
+deepExtend(config, config_secret)
 
 module.exports = config

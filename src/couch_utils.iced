@@ -4,7 +4,7 @@ fs = require('fs')
 path = require('path')
 _ = require('underscore')
 {exec} = require 'child_process'
-
+Promise = require('./promise')
 
 module.exports = (conf) ->
   x = {}
@@ -15,6 +15,7 @@ module.exports = (conf) ->
     out += user + ':' + conf.COUCH_PWD + '@'
     out += conf.COUCHDB.HOST + ':' + conf.COUCHDB.PORT
 
+  x.conf = conf
   x.nano_user = (user) ->
     return require('nano-promise')({url: get_couchdb_url(user)})
 
@@ -25,7 +26,7 @@ module.exports = (conf) ->
     await nano_system_user.db.create(db_name, defer(err, resp))
     if err
       return callback?(err, resp)
-    design_docs = require('../../../lib/design_docs/' + db_name.split('_')[0])
+    design_docs = require(path.join(conf.COUCH_DESIGN_DOCS_DIR, db_name.split('_')[0]))
     await x.sync_design_docs(db_name, design_docs, security_doc, defer(err, resp))
     if err
       return callback?(err, resp)
@@ -78,7 +79,7 @@ module.exports = (conf) ->
     updates the design doc - does not replace
     db_type - the type of database - updates all dbs whos names start with db_type
     """
-    design_docs = require('../../../lib/design_docs/' + db_type)
+    design_docs = require(path.join(conf.COUCH_DESIGN_DOCS_DIR, db_type))
     await nano_system_user.db.list(defer(err, all_dbs))
     dbs = _.filter(all_dbs, (db) -> db.indexOf(db_type) == 0)
     errs = []
@@ -97,7 +98,7 @@ module.exports = (conf) ->
     if a string, the security doc will be looked up in the design doc folder.
     ###
     if _.isString(security_doc)
-      security_doc_path = path.join(__dirname, '../../../lib/design_docs', security_doc, '_security')
+      security_doc_path = path.join(conf.COUCH_DESIGN_DOCS_DIR, security_doc, '_security')
       await fs.readFile(security_doc_path, {encoding: 'utf8'}, defer(err, security_data))
       if err?.code == 'ENOENT'
         return callback()
@@ -121,7 +122,7 @@ module.exports = (conf) ->
       for name, i in design_doc_names
         url = get_couchdb_url('admin') + '/' + db_name
         cmd = 'kanso push ' + name + ' ' + url
-        wd = path.join(__dirname, '../../../lib/design_docs')
+        wd = conf.COUCH_DESIGN_DOCS_DIR
         cp = exec(cmd, {cwd: wd}, defer(errors[i]))
         cp.stdout.pipe(process.stdout)
         cp.stderr.pipe(process.stderr)
@@ -169,11 +170,11 @@ module.exports = (conf) ->
     else
       return callback(null, bulk_resp)
 
-  x.get_uuid = (callback) ->
-    await nano_system_user.request({db: "_uuids"}, defer(err, resp))
-    if err
-      return callback(err, resp)
-    return callback(null, resp.uuids[0])
+  x.getUuid = () ->
+    ### returns a promise ###
+    return nano_system_user.request({db: "_uuids"}, 'promise').then((resp) ->
+      Promise.resolve(resp.uuids[0])
+    )
 
   x.get_uuids = (count, callback) ->
     # params is not working for some reason so hacked around it with path

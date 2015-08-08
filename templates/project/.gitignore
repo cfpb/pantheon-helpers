@@ -3,6 +3,11 @@
 /lib/config_secret.js
 /src/config_secret.coffee
 
+# Testing #
+###########
+/coverage
+/_specjs
+
 # Compiled source #
 ###################
 *.com

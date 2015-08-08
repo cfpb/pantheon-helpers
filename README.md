@@ -668,12 +668,7 @@ In `$SISYPHUS/src/design_docs/boulder/lib/app.coffee`:
 ...
 
   shows: {
-    get_prepped: (doc, req) ->
-      # we must initialize helpers within the show/list function,
-      # as getRow, start, and send do not exist outside the context of these functions
-      boundHelpers = helpers(shared, getRow, start, send)
-      boundHelpers.shows.get_prepped(doc, req)
-  }
+    get_prepped: helpers.get_prepped
 
 ...
 ```

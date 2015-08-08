@@ -136,16 +136,16 @@ u.formatId = (id, typeName) ->
     return typeName + '_' + id
 
 u.getActor = (couchUtils, userName) ->
+  ### returns promise ###
   Promise = require('./promise')
   systemUserName = couchUtils.conf.COUCHDB.SYSTEM_USER
-  ### returns promise ###
   if _.isObject(userName)  # if a user object was passed, instead of a username, return the user object
     return Promise.resolve(userName)
   if userName == systemUserName
     systemUser = {name: systemUserName, roles: []}
     return Promise.resolve(systemUser)
   else
-    userDb = couchUtils.get_system_user().use('_users')
+    userDb = couchUtils.nano_system_user.use('_users')
     return userDb.get('org.couchdb.user:' + userName, 'promise')
 
 

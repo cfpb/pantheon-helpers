@@ -37,5 +37,8 @@ coverage.xml
 /node_modules/
 bower_components/
 .grunt/
+
+# Testing #
+###########
 /coverage
-/spec/**/*.js
+/_specjs

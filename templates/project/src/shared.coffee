@@ -22,11 +22,11 @@ key is the document type, value is the function to prep that document type
 ###
 s.prepDocFns = {}
 
-s.prepDoc = (doc) ->
+s.prepDoc = (doc, actor) ->
   docType = s.getDocType(doc)
   prepDoc = s.prepDocFns[docType]
   if prepDoc
-    doc = prepDoc(doc)
+    doc = prepDoc(doc, actor)
   return doc
 
 module.exports = s

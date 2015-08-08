@@ -1,6 +1,6 @@
 _ = require('underscore')
-shared = require('./lib/shared')
-helpers = require('pantheon-helpers').helpers
+shared = require('./shared')
+helpers = require('pantheon-helpers').design_docs.helpers(shared)
 
 dd =
   views: {}

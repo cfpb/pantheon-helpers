@@ -19,11 +19,14 @@ task 'watch', 'Watch src directory and build the .js files', (options) ->
 option '-v', '--verbose', 'verbose testing output'
 option '-s', '--spec-only', 'run specs without coverage'
 task 'test', 'run all tests', (options) ->
-  cmd = "./node_modules/iced-coffee-script/bin/coffee --bare --compile --output ./spec/ ./spec/"
+  cmd = "./node_modules/iced-coffee-script/bin/coffee --bare --compile --output ./_specjs/ ./spec/"
   proxyExec(cmd, process, () -> 
     cmd = if options['spec-only'] then "" else "./node_modules/istanbul/lib/cli.js cover "
-    cmd += "./node_modules/jasmine-node/bin/jasmine-node ./spec"
+    cmd += "./node_modules/jasmine-node/bin/jasmine-node "
     cmd += if options.verbose then "--verbose " else ""
-    cmd += " ./spec/"
-    proxyExec(cmd, process, (code) -> process.exit(code))
+    cmd += " ./_specjs/"
+    proxyExec(cmd, process, (code) ->
+      exec('rm -rf ./_specjs')
+      process.exit(code)
+    )
   )

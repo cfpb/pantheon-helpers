@@ -176,7 +176,7 @@ describe 'getActor', () ->
       use: jasmine.createSpy('use').andReturn(this.dbClient)
     }
     this.couchUtils = {
-      get_system_user:  jasmine.createSpy('get_system_user').andReturn(this.client),
+      nano_system_user: this.client,
       conf: {COUCHDB: {SYSTEM_USER: 'systemUser'}},
     }
 

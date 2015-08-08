@@ -1,7 +1,8 @@
 _ = require('underscore')
-h = {}
 
-module.exports = (shared, getRow, start, send) ->
+module.exports = (shared) ->
+  h = {}
+
   h.JSONResponse = (doc) ->
     ###
     format a proper JSON response for the document
@@ -13,7 +14,7 @@ module.exports = (shared, getRow, start, send) ->
       body: JSON.stringify(doc),
     }
 
-  h.sendNakedList = (rowTransform) ->
+  h.sendNakedList = (getRow, start, send, rowTransform) ->
     ###
     lazily send a JSON serialized list of rows,
     each having been transformed by rowTransform.
@@ -44,47 +45,49 @@ module.exports = (shared, getRow, start, send) ->
       send(JSON.stringify(transformedRow))
     send(']')
 
-  h.listGenerators =
-    get_prepped_of_type: (docType) ->
-      ###
-      returns a list function
-      must call with {get_docs: true}
-      only return documents of the specified type
-      run all document through the appropriate prepDoc function defined in shared.prepDocFns
-      ###
-      return (header, req) ->
-        h.sendNakedList((row) ->
-          doc = row.doc
-          if shared.getDocType(doc) != docType
-            throw 'skip'
-          return shared.prepDoc(doc)
-        )
-
   h.lists =
-    get_prepped: (header, req) ->
+    get_prepped: (getRow, start, send, header, req) ->
       ###
       must call with {get_docs: true}
       run all document through the appropriate prepDoc function defined in shared.prepDocFns
       ###
-      h.sendNakedList((row) -> shared.prepDoc(row.doc))
+      h.sendNakedList(getRow, start, send, (row) -> shared.prepDoc(row.doc))
 
-    get_values: (header, req) ->
+    get_values: (getRow, start, send, header, req) ->
       ###
       return only the value from the passed view's map function
       ###
-      h.sendNakedList((row) -> row.value)
+      h.sendNakedList(getRow, start, send, (row) -> row.value)
 
-    get_first_prepped: (header, req) ->
+    get_first_prepped: (getRow, start, send, header, req) ->
       ###
       must call with {get_docs: true}
       get the first returned document and run it through the prepDoc function
       ###
       row = getRow()
       if row
-        return h.shows.get_prepped(row.doc)
+        start({
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        preppedDoc = shared.prepDoc(row.doc)
+        send(JSON.stringify(preppedDoc))
       else
         throw(['error', 'not_found', 'document matching query does not exist'])
 
+    get_prepped_of_type: (getRow, start, send, docType, header, req) ->
+      ###
+      must call with {get_docs: true}
+      only return documents of the specified type
+      run all document through the appropriate prepDoc function defined in shared.prepDocFns
+      ###
+      h.sendNakedList(getRow, start, send, (row) ->
+        doc = row.doc
+        if shared.getDocType(doc) != docType
+          throw 'skip'
+        return shared.prepDoc(doc)
+      )
 
   h.shows =
     get_prepped: (doc, req) ->

@@ -17,7 +17,7 @@ beforeEvery = () ->
     getDocType: jasmine.createSpy('getDocType').andCallFake((doc) -> return doc._id.split('_')[0])
     prepDoc: jasmine.createSpy('prepDoc').andCallFake((doc) -> doc.prepped=true; return doc)
   }
-  this.helpers = helpers(this.shared, this.getRow, this.start, this.send)
+  this.helpers = helpers(this.shared)
 
 describe 'JSONResponse', () ->
   beforeEach beforeEvery
@@ -43,7 +43,7 @@ describe 'sendNakedList', () ->
   it 'sends a proper header', () ->
     cut = this.helpers.sendNakedList
 
-    cut((row) -> return row)
+    cut(this.getRow, this.start, this.send, (row) -> return row)
 
     expect(this.start).toHaveBeenCalledWith({
       headers: {
@@ -54,7 +54,7 @@ describe 'sendNakedList', () ->
   it 'returns a json serialized representation of data', () ->
     cut = this.helpers.sendNakedList
 
-    cut((row) -> return row)
+    cut(this.getRow, this.start, this.send, (row) -> return row)
 
     actual = JSON.parse(this.sent)
     expect(actual).toEqual(this.rows)
@@ -63,7 +63,7 @@ describe 'sendNakedList', () ->
     cut = this.helpers.sendNakedList
 
     transformRow = (row) -> return row.doc
-    cut(transformRow)
+    cut(this.getRow, this.start, this.send, transformRow)
 
     actual = JSON.parse(this.sent)
     expect(actual).toEqual(this.rows.map(transformRow))
@@ -74,7 +74,7 @@ describe 'sendNakedList', () ->
     transformRow = (row) ->
       if row.key % 2 then throw 'skip'
       return row
-    cut(transformRow)
+    cut(this.getRow, this.start, this.send, transformRow)
 
     actual = JSON.parse(this.sent)
     expect(actual).toEqual(_.filter(this.rows, (row) -> not (row.key % 2)))
@@ -85,30 +85,30 @@ describe 'get_prepped_of_type', () ->
     beforeEvery.apply(this)
     spyOn(this.helpers, 'sendNakedList')
 
-  it 'returns a couchdb list function', () ->
-    cut = this.helpers.listGenerators.get_prepped_of_type
-    actual = cut('team')
-
-    expect(actual).toEqual(jasmine.any(Function))
-
   it 'delegates to sendNakedList', () ->
-    cut = this.helpers.listGenerators.get_prepped_of_type
+    cut = this.helpers.lists.get_prepped_of_type
 
-    cut('team')('header', 'req')
+    cut(this.getRow, this.start, this.send, 'team', 'header', 'req')
 
-    expect(this.helpers.sendNakedList).toHaveBeenCalled()
+    expect(this.helpers.sendNakedList).toHaveBeenCalledWith(this.getRow, this.start, this.send, jasmine.any(Function))
 
   it 'passes a transformRow function that skips when not of matching type', () ->
-    cut = this.helpers.listGenerators.get_prepped_of_type('team')('header', 'req')
-    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
+    cut = this.helpers.lists.get_prepped_of_type
+
+    cut(this.getRow, this.start, this.send, 'team', 'header', 'req')
+
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
 
     expect(() ->
       rowTransform({doc: {_id: 'user_4'}})
     ).toThrow('skip')
 
   it 'passes a transformRow function that preps docs that are of the matching type', () ->
-    cut = this.helpers.listGenerators.get_prepped_of_type('team')('header', 'req')
-    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
+    cut = this.helpers.lists.get_prepped_of_type
+
+    cut(this.getRow, this.start, this.send, 'team', 'header', 'req')
+
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
 
     actual = rowTransform({doc: {_id: 'team_4'}})
     expect(actual).toEqual({_id: 'team_4', prepped: true})
@@ -122,14 +122,16 @@ describe 'lists.get_prepped', () ->
   it 'delegates to sendNakedList', () ->
     cut = this.helpers.lists.get_prepped
 
-    cut('header', 'req')
+    cut(this.getRow, this.start, this.send, 'header', 'req')
 
-    expect(this.helpers.sendNakedList).toHaveBeenCalled()
+    expect(this.helpers.sendNakedList).toHaveBeenCalledWith(this.getRow, this.start, this.send, jasmine.any(Function))
 
   it 'passes a transformRow function that preps docs', () ->
-    this.helpers.lists.get_prepped('header', 'req')
+    cut = this.helpers.lists.get_prepped
 
-    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
+    cut(this.getRow, this.start, this.send, 'header', 'req')
+
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
 
     actual = rowTransform({doc: {_id: 'team_4'}})
     expect(actual).toEqual({_id: 'team_4', prepped: true})
@@ -143,14 +145,14 @@ describe 'lists.get_values', () ->
   it 'delegates to sendNakedList', () ->
     cut = this.helpers.lists.get_values
 
-    cut('header', 'req')
+    cut(this.getRow, this.start, this.send, 'header', 'req')
 
-    expect(this.helpers.sendNakedList).toHaveBeenCalled()
+    expect(this.helpers.sendNakedList).toHaveBeenCalledWith(this.getRow, this.start, this.send, jasmine.any(Function))
 
   it 'passes a transformRow function that returns the row value', () ->
     this.helpers.lists.get_values('header', 'req')
 
-    rowTransform = this.helpers.sendNakedList.calls[0].args[0]
+    rowTransform = this.helpers.sendNakedList.calls[0].args[3]
 
     actual = rowTransform({doc: {_id: 'team_4'}, value: 'a'})
     expect(actual).toEqual('a')
@@ -159,22 +161,28 @@ describe 'lists.get_values', () ->
 describe 'lists.get_first_prepped', () ->
   beforeEach beforeEvery
 
-  it 'gets the first row and returns the result from sending it through shows.get_prepped', () ->
-    spyOn(this.helpers.shows, 'get_prepped').andReturn('prepped')
+  it 'gets the first row and returns the result properly formed and prepped', () ->
+    
 
     cut = this.helpers.lists.get_first_prepped
-    actual = cut()
+    actual = cut(this.getRow, this.start, this.send)
 
     expect(this.getRow.calls.length).toEqual(1)
-    expect(this.helpers.shows.get_prepped).toHaveBeenCalledWith(this.rows[0].doc)
-    expect(actual).toEqual('prepped')
+    expect(this.start).toHaveBeenCalledWith({
+      headers: {
+        'Content-Type': "application/json"
+      }
+    })
+    expect(JSON.parse(this.sent).prepped).toBe(true)
 
   it 'throws a 404 error if there are no rows', () ->
     this.getRow.andReturn(undefined)
 
     cut = this.helpers.lists.get_first_prepped
 
-    expect(cut).toThrow(['error', 'not_found', 'document matching query does not exist'])
+    expect(() =>
+      cut(this.getRow, this.start, this.send, 'req', 'resp')
+    ).toThrow(['error', 'not_found', 'document matching query does not exist'])
 
 
 describe 'shows.get_prepped', () ->

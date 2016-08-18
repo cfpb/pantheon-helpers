@@ -14,7 +14,7 @@
     "iced-runtime": "1.0.2",
     "basic-auth": "1.0.0",
     "nano-promise": "git+https://github.com/dgreisen-cfpb/nano-promise.git",
-    "node-uuid": "1.4.2",
+    "node-uuid": "1.4.7",
     "parse-links": "0.1.0",
     "promise": "^6.1.0",
     "request": "2.74.0",

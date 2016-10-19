@@ -11,19 +11,19 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "iced-runtime": "1.0.2",
     "basic-auth": "1.0.0",
+    "bunyan": "1.8.1",
+    "coveralls": "~2.11.2",
+    "follow": "0.11.4",
+    "iced-runtime": "1.0.2",
     "nano-promise": "git+https://github.com/dgreisen-cfpb/nano-promise.git",
     "node-uuid": "1.4.7",
     "parse-links": "0.1.0",
     "promise": "^6.1.0",
+    "prompt": "0.2.14",
     "request": "2.74.0",
     "underscore": "1.7.0",
-    "underscore.string": "3.0.3",
-    "follow": "0.11.4",
-    "prompt": "0.2.14",
-    "bunyan": "1.8.1",
-    "coveralls": "~2.11.2"
+    "underscore.string": "3.0.3"
   },
   "devDependencies": {
     "iced-coffee-script": "1.8.0-e",

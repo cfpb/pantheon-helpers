@@ -11,8 +11,8 @@
   },
   "main": "lib/index",
   "dependencies": {
-    "basic-auth": "1.0.0",
-    "bunyan": "1.8.1",
+    "basic-auth": "^1.0.4",
+    "bunyan": "^1.8.3",
     "coveralls": "~2.11.2",
     "follow": "0.11.4",
     "iced-runtime": "1.0.2",
@@ -20,10 +20,10 @@
     "node-uuid": "1.4.7",
     "parse-links": "0.1.0",
     "promise": "^6.1.0",
-    "prompt": "0.2.14",
-    "request": "2.74.0",
-    "underscore": "1.7.0",
-    "underscore.string": "3.0.3"
+    "prompt": "~0.2.14",
+    "request": "~2.74.0",
+    "underscore": "~1.7.0",
+    "underscore.string": "~3.0.3"
   },
   "devDependencies": {
     "iced-coffee-script": "1.8.0-e",
